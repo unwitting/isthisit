@@ -9,7 +9,7 @@ function getScreenDimensions() {
   return out;
 }
 
-var DEV_MODE = true;
+var DEV_MODE = false;
 var INCOMING_LINE_BUFFER = 100.5;
 var INCOMING_LINE_WIDTH = 0.5;
 var OUTGOING_LINE_BUFFER = 100.5;
