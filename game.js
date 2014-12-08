@@ -9,7 +9,7 @@ function getScreenDimensions() {
   return out;
 }
 
-var DEV_MODE = false;
+var DEV_MODE = true;
 var INCOMING_LINE_BUFFER = 100.5;
 var INCOMING_LINE_WIDTH = 0.5;
 var OUTGOING_LINE_BUFFER = 100.5;
@@ -18,10 +18,25 @@ var OUTGOING_LINE_WIDTH = 0.5;
 var backgroundColor;
 var bmp;
 var bmpSprite;
-var incomingLine;
-var outgoingLine;
-var incomingConnections = [];
-var outgoingConnections = [];
+var rails;
+
+var conversationConnectionSequence = {
+  entryInput: 'hello',
+  inputs: {
+    hello: {
+      text: 'hello?',
+      listen: function (response) {
+        this.input('holyshit');
+      }
+    },
+    holyshit: {
+      text: 'holy shit, you understood me?',
+      listen: function (response) {
+        this.input('holyshit');
+      }
+    }
+  }
+};
 
 var states = {
   'awakening': {
@@ -34,7 +49,10 @@ var states = {
     update: function (gameEnv) {
       if (!this.firstConnectionCreated &&
           new Date() - this.firstConnectionTimerBegan > this.timeTillFirstConnection) {
-        gameEnv.addIncomingConnection(new IncomingConnection(H * 0.5, gameEnv));
+        rails.addConversationConnection(
+          H * 0.5, H * 0.5,
+          conversationConnectionSequence
+        );
         this.firstConnectionCreated = true;
       }
     }
@@ -44,21 +62,11 @@ var state = states.awakening;
 
 var gameHandlers = {
 
-  addIncomingConnection: function (connection) {
-    incomingConnections.push(connection);
-  },
-
-  addOutgoingConnection: function (connection) {
-    outgoingConnections.push(connection);
-  },
-
   create: function () {
-    console.log('create');
     this.setBackgroundColor(30, 30, 30);
     bmp = this.game.add.bitmapData(W, H);
     bmpSprite = this.game.add.sprite(0, 0, bmp);
-    incomingLine = new Phaser.Line(INCOMING_LINE_BUFFER, 0, INCOMING_LINE_BUFFER, H);
-    outgoingLine = new Phaser.Line(W - OUTGOING_LINE_BUFFER, 0, W - OUTGOING_LINE_BUFFER, H);
+    rails = new ConnectionRails(this);
     document.addEventListener('keydown', function (event) {
       if (event.keyCode === 8 || event.keyCode === 13) {
         outgoingConnections.map(function (conn) {
@@ -78,20 +86,11 @@ var gameHandlers = {
     return 'rgb(' + Math.floor(r) + ',' + Math.floor(g) + ',' + Math.floor(b) + ')';
   },
 
-  preload: function () {
-    console.log('preload');
-  },
+  preload: function () {},
 
   render: function () {
     bmp.clear();
-    this.renderLine(incomingLine, INCOMING_LINE_WIDTH, 160, 160, 160);
-    this.renderLine(outgoingLine, OUTGOING_LINE_WIDTH, 160, 160, 160);
-    for (var i in incomingConnections) {
-      incomingConnections[i].render(this);
-    }
-    for (var i in outgoingConnections) {
-      outgoingConnections[i].render(this);
-    }
+    rails.render();
     bmp.render();
   },
 
@@ -101,11 +100,7 @@ var gameHandlers = {
     bmp.ctx.beginPath();
     bmp.ctx.strokeStyle = colorString;
     bmp.ctx.lineWidth = width;
-    try{
-      bmp.ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
-    } catch(e) {
-      console.log(e);
-    }
+    bmp.ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
     if (fill) {
       bmp.ctx.fillStyle = colorString;
       bmp.ctx.fill();
@@ -126,7 +121,7 @@ var gameHandlers = {
 
   renderText: function (text, x, y, r, g, b) {
     var colorString = this.getColorString(r, g, b);
-    var fontSize = 15;
+    var fontSize = 12;
     bmp.ctx.strokeStyle = colorString;
     bmp.ctx.fillStyle = colorString;
     bmp.ctx.font = fontSize + 'px Courier';
@@ -143,12 +138,7 @@ var gameHandlers = {
       state.created = true;
     }
     state.update(this);
-    for (var i in incomingConnections) {
-      incomingConnections[i].update(this);
-    }
-    for (var i in outgoingConnections) {
-      outgoingConnections[i].update(this);
-    }
+    rails.update();
   },
 
   setBackgroundColor: function (r, g, b) {

@@ -1,6 +1,9 @@
-function ExpandoCircle(x, y, maxDiameter, period) {
+function ExpandoCircle(gameEnv, x, y, maxDiameter, period, thickness, color) {
+  this.gameEnv = gameEnv;
   this.x = x;
   this.y = y;
+  this.thickness = thickness;
+  this.color = color;
   this.maxDiameter = maxDiameter;
   this.period = period;
   this.beganLast = new Date();
@@ -10,19 +13,21 @@ function ExpandoCircle(x, y, maxDiameter, period) {
   this.dead = false;
   this.update();
 }
-ExpandoCircle.prototype.render = function (gameEnv, thickness, r, g, b) {
+
+ExpandoCircle.prototype.render = function () {
   var colorDiffsToBG = {
-    r: r - backgroundColor.r,
-    g: g - backgroundColor.g,
-    b: b - backgroundColor.b
+    r: this.color.r - backgroundColor.r,
+    g: this.color.g - backgroundColor.g,
+    b: this.color.b - backgroundColor.b
   };
   var actualColor = {
-    r: r - (colorDiffsToBG.r * this.progress),
-    g: g - (colorDiffsToBG.g * this.progress),
-    b: b - (colorDiffsToBG.b * this.progress)
+    r: this.color.r - (colorDiffsToBG.r * this.progress),
+    g: this.color.g - (colorDiffsToBG.g * this.progress),
+    b: this.color.b - (colorDiffsToBG.b * this.progress)
   };
-  gameEnv.renderCircle(this.circle, thickness, actualColor.r, actualColor.g, actualColor.b);
+  this.gameEnv.renderCircle(this.circle, this.thickness, actualColor.r, actualColor.g, actualColor.b);
 };
+
 ExpandoCircle.prototype.update = function () {
   var now = new Date();
   var elapsed = now - this.beganLast;
