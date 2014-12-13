@@ -2,7 +2,7 @@
 if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
 
 window.CONVERSATIONS.birth = {
-  entryInput: 'donthavetotellyou',
+  entryInput: 'hello',
   inputs: {
     hello: {
       text: 'hello?',
