@@ -12,6 +12,7 @@ ConnectionRails.prototype.addConversationConnection = function (inY, outY, conve
   var connection = new ConversationConnection(this.gameEnv, this, inY, outY, conversation);
   this.connections.push(connection);
 };
+
 ConnectionRails.prototype.render = function () {
   var that = this;
   // Render the rails themselves

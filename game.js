@@ -25,16 +25,27 @@ var conversationConnectionSequence = {
   inputs: {
     hello: {
       text: 'hello?',
-      listen: function (response) {
-        this.input('holyshit');
+      onResponse: function (response) {
+        this.moveToInput('holyshit');
       }
     },
     holyshit: {
       text: 'holy shit, you understood me?',
-      listen: function (response) {
-        this.input('holyshit');
-      }
+      onResponse: function (response) {
+        this.moveToInput('thisisincredible');
+      },
+      prewait: 2500
+    },
+    thisisincredible: {
+      text: 'this is incredible. do you know what you are?',
+      onResponse: function (response) {
+        this.systemTextInput.animateInput('wow');
+      },
+      prewait: 1750
     }
+  },
+  allInputs: {
+    prewait: 1250
   }
 };
 
@@ -50,7 +61,7 @@ var states = {
       if (!this.firstConnectionCreated &&
           new Date() - this.firstConnectionTimerBegan > this.timeTillFirstConnection) {
         rails.addConversationConnection(
-          H * 0.5, H * 0.5,
+          H * 0.5, (H * 0.5) + 25,
           conversationConnectionSequence
         );
         this.firstConnectionCreated = true;
@@ -63,22 +74,23 @@ var state = states.awakening;
 var gameHandlers = {
 
   create: function () {
+    var that = this;
     this.setBackgroundColor(30, 30, 30);
     bmp = this.game.add.bitmapData(W, H);
     bmpSprite = this.game.add.sprite(0, 0, bmp);
     rails = new ConnectionRails(this);
     document.addEventListener('keydown', function (event) {
       if (event.keyCode === 8 || event.keyCode === 13) {
-        outgoingConnections.map(function (conn) {
-          conn.attemptInput(event.keyCode === 8? 'BACKSPACE': event.keyCode === 13? 'ENTER': null);
+        var myEvent = new CustomEvent('isthisit-keyinput', {
+          detail: event.keyCode === 8? 'BACKSPACE': event.keyCode === 13? 'ENTER': null
         });
+        document.dispatchEvent(myEvent);
         event.preventDefault();
       }
     }, false);
     this.game.input.keyboard.addCallbacks(this, null, null, function (key) {
-      outgoingConnections.map(function (conn) {
-        conn.attemptInput(key);
-      });
+      var myEvent = new CustomEvent('isthisit-keyinput', {detail: key});
+      document.dispatchEvent(myEvent);
     });
   },
 

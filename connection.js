@@ -1,249 +1,238 @@
-function Connection(y, gameEnv) {
-  this.y = Math.floor(y) + 0.5;
+CONNECTION_STATE_INCOMING = 0;
+CONNECTION_STATE_AWAITING_ACCEPT = 1;
+CONNECTION_STATE_OPENING = 2;
+CONNECTION_STATE_OPEN = 3;
+CONNECTION_STATE_CLOSING = 4;
+CONNECTION_STATE_CLOSED = 5;
+CONNECTION_STATE_REMOVING = 6;
+CONNECTION_STATE_DEAD = 7;
+
+function Connection(gameEnv, rails, inY, outY) {
   this.gameEnv = gameEnv;
-  this.pulser = new PulseCircle(this.x, this.y, 9, 15, 1500);
-  this.expandos = [];
-  this.text = '';
-  this.thickness = 1;
-  this.alerting = false;
-  this.alertPeriod = 1000;
-  this.lastAlert = null;
-  this.dual = {};
-  this.selected = false;
-}
-Connection.prototype.alert = function () {
-  this.alerting = true;
-  this.lastAlert = 2 * this.alertPeriod;
-  return this;
-};
-Connection.prototype.deselect = function () {
-  if (this.selected) {
-    this.selected = false;
-  }
-};
-Connection.prototype.render = function () {
-  for (var i in this.expandos) {
-    this.expandos[i].render(
-      this.gameEnv,
-      1,
-      this.color.r,
-      this.color.g,
-      this.color.b
-    );
-  }
-  this.pulser.render(
-    this.gameEnv,
-    this.alerting? this.thickness * 2: this.thickness,
-    this.color.r,
-    this.color.g,
-    this.color.b,
-    this.selected || this.dual.selected
+  this.rails = rails;
+  this.inY = inY;
+  this.outY = outY;
+  this.inNode = new ConnectionNode(
+    gameEnv, this, true, rails.inX, inY, {r: 100, g: 100, b: 255}
   );
-};
-Connection.prototype.update = function () {
-  this.pulser.update(this.gameEnv);
-  var newExpandos = [];
-  for (var i in this.expandos) {
-    if (!this.expandos[i].dead) {
-      newExpandos.push(this.expandos[i]);
-    }
-  }
-  this.expandos = newExpandos;
-  for (var i in this.expandos) {
-    this.expandos[i].update(this.gameEnv);
+  this.outNode = new ConnectionNode(
+    gameEnv, this, false, rails.outX, outY, {r: 255, g: 100, b: 100}
+  );
+  this.nodes = [this.inNode, this.outNode];
+  this.connectionState = CONNECTION_STATE_INCOMING;
+  this.selected = false;
+  this.hovered = false;
+}
+
+Connection.prototype.deselect = function () {
+  var that = this;
+  if (that.selected) {
+    that.selected = false;
   }
 };
 
-function IncomingConnection(y, gameEnv) {
-  this.x = INCOMING_LINE_BUFFER;
-  this.color = {r: 100, g: 100, b: 255};
-  this.targetText = null;
-  this.textRenderPeriod = 50;
-  this.lastTextUpdate = null;
-  this.accepted = false;
-  Connection.call(this, y, gameEnv);
-  this.alert();
-}
-IncomingConnection.prototype = Object.create(Connection.prototype);
-IncomingConnection.prototype.constructor = IncomingConnection;
-IncomingConnection.prototype.accept = function () {
-  if (!this.accepted) {
-    this.accepted = true;
-    this.dual = new OutgoingConnection(this, this.y + 25, this.gameEnv);
-    this.gameEnv.addOutgoingConnection(this.dual);
-    this.produceText('hello?');
+Connection.prototype.isClicked = function () {
+  return this.inNode.isClicked() || this.outNode.isClicked();
+};
+
+Connection.prototype.isHovered = function () {
+  return this.inNode.isHovered() || this.outNode.isHovered();
+};
+
+Connection.prototype.onOpen = function () {};
+
+Connection.prototype.progressState = function () {
+  this.connectionState++;
+  if (this.connectionState === CONNECTION_STATE_OPEN) {
+    this.onOpen();
   }
 };
-IncomingConnection.prototype.produceText = function (str) {
-  this.targetText = str;
-  this.text = '';
-  this.lastTextUpdate = new Date();
+
+Connection.prototype.render = function () {
+  this.renderConnectionLine();
+  this.renderExteriorLineIn();
+  this.renderExteriorLineOut();
+  // Render nodes
+  _.invoke(this.nodes, 'render');
 };
-IncomingConnection.prototype.receiveText = function (str) {
-  console.log(str);
-  if (this.text.match(/^hello.$/) &&
-      str.match(/^.*(hey|hi|hello|yo|wha.*up|sup|how|going).*$/i)) {
-    this.produceText('holy shit, you understood that?');
-  } else if (
-      this.text.match(/^holy shit.*$/) &&
-      str.match(/^.*(ye|course|did|of|huh|uh|mm).*$/i)
-  ) {
-    this.produceText('i actually did it... do you know what you are?');
-  } else if (this.text.match(/^i actually.*$/)) {
-    if (str.match(/^.*(ai|a.i|artifi|intel|compu|machi).*$/i)) {
-      this.produceText('you really are aware, aren\'t you :) shit...');
-    } else {
-      this.produceText('that was dreaming a bit too big of me, i guess :)');
-    }
-  } else {
-    this.produceText('let\'s try again, maybe you\'re still learning...');
+
+Connection.prototype.renderConnectionLine = function () {
+  if (!(this.connectionState === CONNECTION_STATE_OPEN)) {
+    return;
   }
+  var that = this;
+  var connectionLines = [
+    new Phaser.Line(
+      this.inNode.x - 15,
+      this.inNode.y,
+      this.inNode.x - 15,
+      this.outNode.y
+    ),
+    new Phaser.Line(
+      this.inNode.x - 15,
+      this.outNode.y,
+      this.outNode.x - this.outNode.pulseCircle.circle.radius,
+      this.outNode.y
+    )
+  ];
+  _.each(connectionLines, function (line) {
+    that.gameEnv.renderLine(line, 0.5, 45, 45, 45);
+  });
 };
-IncomingConnection.prototype.render = function () {
-  if (this.accepted) {
-    this.gameEnv.renderLine(
-      new Phaser.Line(INCOMING_LINE_BUFFER - this.pulser.circle.radius, this.y, 0, this.y),
-      0.5,
-      this.color.r, this.color.g, this.color.b
+
+Connection.prototype.renderExteriorLineIn = function (thickness) {
+  if (!(this.connectionState < CONNECTION_STATE_REMOVING)) {
+    return;
+  }
+  thickness = thickness === undefined? 0.5: thickness;
+  var exteriorLineIn = new Phaser.Line(
+    0,
+    this.inNode.y,
+    this.inNode.x - this.inNode.pulseCircle.circle.radius,
+    this.inNode.y
+  );
+  this.gameEnv.renderLine(
+    exteriorLineIn, thickness,
+    this.inNode.color.r, this.inNode.color.g, this.inNode.color.b
+  );
+};
+
+Connection.prototype.renderExteriorLineOut = function (thickness) {
+  if (
+    this.connectionState >= CONNECTION_STATE_REMOVING ||
+    !this.outNode.displayed
+    ) {
+    return;
+  }
+  thickness = thickness === undefined? 0.5: thickness;
+  var exteriorLineOut = new Phaser.Line(
+    this.outNode.x + this.outNode.pulseCircle.circle.radius,
+    this.outNode.y,
+    W,
+    this.outNode.y
+  );
+  this.gameEnv.renderLine(
+    exteriorLineOut, thickness,
+    this.outNode.color.r, this.outNode.color.g, this.outNode.color.b
+  );
+};
+
+Connection.prototype.select = function () {
+  var that = this;
+  if (!that.selected) {
+    that.selected = true;
+    _.invoke(
+      _.filter(that.nodes, function (node) {return node.displayed;}),
+      'addExpandoCircle'
     );
-  }
-  Connection.prototype.render.call(this, this.gameEnv);
-  if (this.text.length > 0) {
-    var textCol = this.selected? {r: 255, g: 255, b: 255}: {r: 100, g: 100, b: 100};
-    this.gameEnv.renderText(
-      this.text,
-      INCOMING_LINE_BUFFER + 13,
-      this.y,
-      textCol.r, textCol.g, textCol.b
-    );
-  }
-}
-IncomingConnection.prototype.select = function () {
-  if (!this.selected) {
-    this.selected = true;
-    this.expandos.push(new ExpandoCircle(this.x, this.y, 200, 800));
-    this.dual.expandos.push(new ExpandoCircle(this.dual.x, this.dual.y, 200, 800));
+    if (this.connectionState === CONNECTION_STATE_AWAITING_ACCEPT) {
+      // A select is an accept, so move on
+      this.progressState();
+    }
   }
 };
-IncomingConnection.prototype.update = function () {
-  Connection.prototype.update.call(this, this.gameEnv);
-  if (this.pulser.circle.contains(
-      this.gameEnv.game.input.mousePointer.x,
-      this.gameEnv.game.input.mousePointer.y)) {
-    if (this.gameEnv.game.input.activePointer.isDown) {
-      this.accept();
-      this.select();
-      this.alerting = false;
-    }
+
+Connection.prototype.update = function () {
+  // Update this connection
+  // Detect mouse environment
+  this.hovered = this.isHovered();
+  if (this.isClicked()) {
+    this.select();
   } else {
     if (this.gameEnv.game.input.activePointer.isDown) {
       this.deselect();
     }
   }
-  if (this.alerting) {
-    var sinceLast = (new Date() - this.lastAlert);
-    if (sinceLast > this.alertPeriod) {
-      this.lastAlert = new Date();
-      this.expandos.push(new ExpandoCircle(this.x, this.y, 150, 1000));
-    }
+  // Update state
+  switch (this.connectionState) {
+    case CONNECTION_STATE_INCOMING:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_AWAITING_ACCEPT:
+      this.inNode.displayed = true;
+      break;
+    case CONNECTION_STATE_OPENING:
+      this.outNode.displayed = true;
+      this.outNode.addExpandoCircle();
+      this.progressState();
+      break;
+    case CONNECTION_STATE_OPEN:
+      break;
   }
-  if (this.targetText !== null) {
-    var period = this.textRenderPeriod;
-    if (this.text.length === 0) {
-      period = period * 20;
-    }
-    if (new Date() - this.lastTextUpdate > period) {
-      // Render next char
-      this.text =
-        this.text + this.targetText.charAt(this.text.length);
-      this.lastTextUpdate = new Date();
-    }
-    if (this.text.length === this.targetText.length) {
-      this.targetText = null;
-      this.lastTextUpdate = null;
-      this.dual.open = true;
-    }
+  // Update all nodes
+  _.invoke(this.nodes, 'update');
+};
+
+ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
+  Connection.call(this, gameEnv, rails, inY, outY);
+  this.conversation = conversation;
+  this.conversationInput = null;
+  this.systemTextInput = new SystemControlledTextInput(
+    gameEnv,
+    this.inNode.x + this.inNode.pulseCircle.circle.radius + 5,
+    this.inNode.y,
+    this.handleSystemTextFinished,
+    this
+  );
+  this.userTextInput = new UserControlledTextInput(
+    gameEnv,
+    this.inNode.x + this.inNode.pulseCircle.circle.radius + 15,
+    this.outNode.y,
+    this.handleUserTextSubmit,
+    this
+  );
+}
+ConversationConnection.prototype = Object.create(Connection.prototype);
+ConversationConnection.prototype.constructor = ConversationConnection;
+
+ConversationConnection.prototype.handleSystemTextFinished = function () {
+  this.userTextInput.listening = true;
+};
+
+ConversationConnection.prototype.handleUserTextSubmit = function (text) {
+  this.userTextInput.listening = false;
+  this.conversation.inputs[this.conversationInput].onResponse.call(this, text);
+};
+
+ConversationConnection.prototype.moveToInput = function (inputName) {
+  this.conversationInput = inputName;
+  var input = this.conversation.inputs[this.conversationInput];
+  this.systemTextInput.animateInput(
+    input.text,
+    input.prewait || this.conversation.allInputs.prewait || 0
+  );
+};
+
+ConversationConnection.prototype.onOpen = function () {
+  this.moveToInput(this.conversation.entryInput);
+};
+
+ConversationConnection.prototype.render = function () {
+  Connection.prototype.render.call(this);
+  // Render text inputs
+  this.systemTextInput.render();
+  this.userTextInput.render();
+};
+
+ConversationConnection.prototype.renderExteriorLineIn = function () {
+  if (this.systemTextInput.animation.animating) {
+    Connection.prototype.renderExteriorLineIn.call(this, 2.5);
+  } else {
+    Connection.prototype.renderExteriorLineIn.call(this);
   }
 };
 
-function OutgoingConnection(dualIncoming, y, gameEnv) {
-  this.x = W - OUTGOING_LINE_BUFFER;
-  this.color = {r: 255, g: 100, b: 100};
-  Connection.call(this, y, gameEnv);
-  this.dual = dualIncoming;
-  this.open = false;
-}
-OutgoingConnection.prototype = Object.create(Connection.prototype);
-OutgoingConnection.prototype.constructor = OutgoingConnection;
-OutgoingConnection.prototype.attemptInput = function (key) {
-  if (this.open && this.dual.selected) {
-    // Able to take input
-    if (key === 'BACKSPACE') {
-      this.text = this.text.substr(0, this.text.length - 1);
-    } else if (key === 'ENTER') {
-      var t = this.text;
-      this.text = '';
-      this.dual.receiveText(t);
-      this.open = false;
-    } else {
-      this.text += key;
-    }
+ConversationConnection.prototype.renderExteriorLineOut = function () {
+  if (this.userTextInput.listening) {
+    Connection.prototype.renderExteriorLineOut.call(this, 2.5);
+  } else {
+    Connection.prototype.renderExteriorLineOut.call(this);
   }
 };
-OutgoingConnection.prototype.render = function () {
-  Connection.prototype.render.call(this, this.gameEnv);
-  var averageR = ((8 * backgroundColor.r) + 255) / 9;
-  var averageG = ((8 * backgroundColor.g) + 255) / 9;
-  var averageB = ((8 * backgroundColor.b) + 255) / 9;
-  this.gameEnv.renderLine(
-    new Phaser.Line(
-      Math.floor(INCOMING_LINE_BUFFER / 2) + 0.5,
-      this.y,
-      this.x - this.pulser.circle.radius,
-      this.y
-    ),
-    0.5,
-    averageR,
-    averageG,
-    averageB
-  );
-  this.gameEnv.renderLine(
-    new Phaser.Line(
-      Math.floor(INCOMING_LINE_BUFFER / 2) + 0.5,
-      this.dual.y,
-      Math.floor(INCOMING_LINE_BUFFER / 2) + 0.5,
-      this.y
-    ),
-    0.5,
-    averageR,
-    averageG,
-    averageB
-  );
-  this.gameEnv.renderLine(
-    new Phaser.Line(
-      this.x + this.pulser.circle.radius,
-      this.y,
-      W,
-      this.y
-    ),
-    0.5,
-    this.color.r,
-    this.color.g,
-    this.color.b
-  );
-  if (this.text.length > 0) {
-    var textCol = this.dual.selected? {r: 255, g: 255, b: 255}: {r: 100, g: 100, b: 100};
-    this.gameEnv.renderText(
-      this.text,
-      INCOMING_LINE_BUFFER + 26,
-      this.y,
-      textCol.r, textCol.g, textCol.b
-    );
-  }
-};
-OutgoingConnection.prototype.update = function () {
-  Connection.prototype.update.call(this, this.gameEnv);
-  if (this.dual.selected && this.open) {
-    // Looking for text input
-  }
+
+ConversationConnection.prototype.update = function () {
+  Connection.prototype.update.call(this);
+  // Update text inputs
+  this.systemTextInput.update();
+  this.userTextInput.update();
 };
