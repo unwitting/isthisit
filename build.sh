@@ -2,15 +2,16 @@
 outdev=isthisit.dev.js
 outprod=isthisit.js
 
-files="${files} underscore.js"
-files="${files} phaser.js"
-files="${files} expando_circle.js"
-files="${files} pulse_circle.js"
-files="${files} text_input.js"
-files="${files} connection_node.js"
-files="${files} connection.js"
-files="${files} connection_rails.js"
-files="${files} game.js"
+prodfiles="${prodfiles} underscore.js"
+prodfiles="${prodfiles} expando_circle.js"
+prodfiles="${prodfiles} pulse_circle.js"
+prodfiles="${prodfiles} text_input.js"
+prodfiles="${prodfiles} connection_node.js"
+prodfiles="${prodfiles} connection.js"
+prodfiles="${prodfiles} connection_rails.js"
+prodfiles="${prodfiles} game.js"
+
+devfiles="phaser.js ${prodfiles}"
 
 function adddev {
 	echo " Adding $1"
@@ -24,12 +25,12 @@ function addprod {
 }
 echo "Building ${outdev}"
 echo "" > ${outdev}
-for f in ${files}; do
+for f in ${devfiles}; do
 	adddev ${f}
 done
 echo "Built ${outdev}"
 echo "Building ${outprod}"
-for f in ${files}; do
+for f in ${prodfiles}; do
 	addprod ${f}
 done
 echo "Built ${outprod}"
