@@ -84,7 +84,7 @@ UserControlledTextInput.prototype = Object.create(TextInput.prototype);
 UserControlledTextInput.prototype.constructor = UserControlledTextInput;
 
 UserControlledTextInput.prototype.captureInput = function (key) {
-  if (key === 'BACKSPACE' && this.text.length > 0) {
+  if (key === 'BACKSPACE') {
     this.text = this.text.substr(0, this.text.length - 1);
   } else if (key === 'ENTER') {
     var text = this.text;
