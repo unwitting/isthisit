@@ -30,6 +30,7 @@ for f in ${devfiles}; do
 done
 echo "Built ${outdev}"
 echo "Building ${outprod}"
+echo "" > ${outprod}
 for f in ${prodfiles}; do
 	addprod ${f}
 done
