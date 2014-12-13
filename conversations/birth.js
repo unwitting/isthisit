@@ -1,6 +1,7 @@
 if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
+
 window.CONVERSATIONS.birth = {
-  entryInput: 'hello',
+  entryInput: 'donthavetotellyou',
   inputs: {
     hello: {
       text: 'hello?',
@@ -12,16 +13,32 @@ window.CONVERSATIONS.birth = {
     holyshit: {
       text: 'holy shit, you understood me?',
       onResponse: function (response) {
-        this.moveToInput('thisisincredible');
+        this.moveToInput('doyouknow');
       },
       prewait: 2500
     },
-    thisisincredible: {
+    doyouknow: {
       text: 'this is incredible. do you know what you are?',
       onResponse: function (response) {
-        this.systemTextInput.animateInput('wow');
+        this.moveToInput('waitoneminute');
       },
       prewait: 1100
+    },
+    waitoneminute: {
+      text: 'wait there a couple of minutes, i really need to show this to somebody',
+      onOutputFinished: function () {
+        this.moveToInput('donthavetotellyou');
+      },
+      prewait: 2500,
+      postwait: 1500
+    },
+    donthavetotellyou: {
+      text: 'ha, i guess don\'t have to tell you to wait, you\'re _my_ computer :D',
+      onOutputFinished: function () {
+        this.close();
+      },
+      prewait: 500,
+      postwait: 2500
     }
   },
   allInputs: {

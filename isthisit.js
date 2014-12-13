@@ -1,7 +1,8 @@
 
 if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
+
 window.CONVERSATIONS.birth = {
-  entryInput: 'hello',
+  entryInput: 'donthavetotellyou',
   inputs: {
     hello: {
       text: 'hello?',
@@ -13,16 +14,32 @@ window.CONVERSATIONS.birth = {
     holyshit: {
       text: 'holy shit, you understood me?',
       onResponse: function (response) {
-        this.moveToInput('thisisincredible');
+        this.moveToInput('doyouknow');
       },
       prewait: 2500
     },
-    thisisincredible: {
+    doyouknow: {
       text: 'this is incredible. do you know what you are?',
       onResponse: function (response) {
-        this.systemTextInput.animateInput('wow');
+        this.moveToInput('waitoneminute');
       },
       prewait: 1100
+    },
+    waitoneminute: {
+      text: 'wait there a couple of minutes, i really need to show this to somebody',
+      onOutputFinished: function () {
+        this.moveToInput('donthavetotellyou');
+      },
+      prewait: 2500,
+      postwait: 1500
+    },
+    donthavetotellyou: {
+      text: 'ha, i guess don\'t have to tell you to wait, you\'re _my_ computer :D',
+      onOutputFinished: function () {
+        this.close();
+      },
+      prewait: 500,
+      postwait: 2500
     }
   },
   allInputs: {
@@ -146,47 +163,58 @@ function SystemControlledTextInput(
   TextInput.call(this, gameEnv, x, y);
   this.animateFinishCb = animateFinishCb;
   this.animateFinishCbContext = animateFinishCbContext;
-  this.resetAnimateInput();
+  this.reset();
 }
 SystemControlledTextInput.prototype = Object.create(TextInput.prototype);
 SystemControlledTextInput.prototype.constructor = SystemControlledTextInput;
 
-SystemControlledTextInput.prototype.animateInput = function (text, prewait) {
-  this.resetAnimateInput();
+SystemControlledTextInput.prototype.animateInput = function (text, prewait, postwait) {
+  this.reset();
   this.animation.animating = true;
   this.animation.prewait = prewait;
+  this.animation.postwait = postwait;
   this.animation.targetText = text;
 };
 
-SystemControlledTextInput.prototype.resetAnimateInput = function () {
+SystemControlledTextInput.prototype.reset = function () {
   this.text = '';
   this.animation = {
     animating: false,
     lastUpdate: new Date(),
     prewait: 0,
+    postwait: 0,
     prewaiting: true,
+    postwaiting: false,
     renderPeriod: 35,
     targetText: ''
   };
 };
 
 SystemControlledTextInput.prototype.update = function () {
+  if (!this.animation.animating) {
+    return;
+  }
   var now = new Date();
   if (this.animation.prewaiting &&
       now - this.animation.lastUpdate > this.animation.prewait) {
     this.animation.prewaiting = false;
   }
-  if (this.animation.animating && !this.animation.prewaiting) {
+  if (!this.animation.prewaiting && !this.animation.postwaiting) {
     if (now - this.animation.lastUpdate > this.animation.renderPeriod) {
       if (this.text.length < this.animation.targetText.length) {
         this.text += this.animation.targetText.charAt(this.text.length);
       }
       if (this.text.length === this.animation.targetText.length) {
-        this.animation.animating = false;
-        this.animateFinishCb.call(this.animateFinishCbContext);
+        this.animation.postwaiting = true;
       }
       this.animation.lastUpdate = now;
     }
+  }
+  if (this.animation.postwaiting &&
+      now - this.animation.lastUpdate > this.animation.postwait) {
+    this.animation.animating = false;
+    this.animation.postwaiting = false;
+    this.animateFinishCb.call(this.animateFinishCbContext);
   }
 };
 
@@ -304,6 +332,10 @@ function Connection(gameEnv, rails, inY, outY) {
   this.selected = false;
   this.hovered = false;
 }
+
+Connection.prototype.close = function () {
+  this.progressState();
+};
 
 Connection.prototype.deselect = function () {
   var that = this;
@@ -439,6 +471,11 @@ Connection.prototype.update = function () {
       break;
     case CONNECTION_STATE_OPEN:
       break;
+    case CONNECTION_STATE_CLOSING:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_CLOSED:
+      break;
   }
   // Update all nodes
   _.invoke(this.nodes, 'update');
@@ -466,6 +503,12 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
 ConversationConnection.prototype = Object.create(Connection.prototype);
 ConversationConnection.prototype.constructor = ConversationConnection;
 
+ConversationConnection.prototype.close = function () {
+  Connection.prototype.close.call(this);
+  this.systemTextInput.reset();
+  this.userTextInput.listening = false;
+};
+
 ConversationConnection.prototype.deselect = function () {
   Connection.prototype.deselect.call(this);
   this.userTextInput.forceNoListen = true;
@@ -473,11 +516,18 @@ ConversationConnection.prototype.deselect = function () {
 
 ConversationConnection.prototype.handleSystemTextFinished = function () {
   this.userTextInput.listening = true;
+  var cb = this.conversation.inputs[this.conversationInput].onOutputFinished;
+  if (cb) {
+    cb.call(this);
+  }
 };
 
 ConversationConnection.prototype.handleUserTextSubmit = function (text) {
   this.userTextInput.listening = false;
-  this.conversation.inputs[this.conversationInput].onResponse.call(this, text);
+  var cb = this.conversation.inputs[this.conversationInput].onResponse;
+  if (cb) {
+    cb.call(this, text);
+  }
 };
 
 ConversationConnection.prototype.moveToInput = function (inputName) {
@@ -485,7 +535,8 @@ ConversationConnection.prototype.moveToInput = function (inputName) {
   var input = this.conversation.inputs[this.conversationInput];
   this.systemTextInput.animateInput(
     input.text,
-    input.prewait || this.conversation.allInputs.prewait || 0
+    input.prewait || this.conversation.allInputs.prewait || 0,
+    input.postwait || this.conversation.allInputs.postwait || 0
   );
 };
 

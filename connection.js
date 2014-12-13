@@ -24,6 +24,10 @@ function Connection(gameEnv, rails, inY, outY) {
   this.hovered = false;
 }
 
+Connection.prototype.close = function () {
+  this.progressState();
+};
+
 Connection.prototype.deselect = function () {
   var that = this;
   if (that.selected) {
@@ -158,6 +162,11 @@ Connection.prototype.update = function () {
       break;
     case CONNECTION_STATE_OPEN:
       break;
+    case CONNECTION_STATE_CLOSING:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_CLOSED:
+      break;
   }
   // Update all nodes
   _.invoke(this.nodes, 'update');
@@ -185,6 +194,12 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
 ConversationConnection.prototype = Object.create(Connection.prototype);
 ConversationConnection.prototype.constructor = ConversationConnection;
 
+ConversationConnection.prototype.close = function () {
+  Connection.prototype.close.call(this);
+  this.systemTextInput.reset();
+  this.userTextInput.listening = false;
+};
+
 ConversationConnection.prototype.deselect = function () {
   Connection.prototype.deselect.call(this);
   this.userTextInput.forceNoListen = true;
@@ -192,11 +207,18 @@ ConversationConnection.prototype.deselect = function () {
 
 ConversationConnection.prototype.handleSystemTextFinished = function () {
   this.userTextInput.listening = true;
+  var cb = this.conversation.inputs[this.conversationInput].onOutputFinished;
+  if (cb) {
+    cb.call(this);
+  }
 };
 
 ConversationConnection.prototype.handleUserTextSubmit = function (text) {
   this.userTextInput.listening = false;
-  this.conversation.inputs[this.conversationInput].onResponse.call(this, text);
+  var cb = this.conversation.inputs[this.conversationInput].onResponse;
+  if (cb) {
+    cb.call(this, text);
+  }
 };
 
 ConversationConnection.prototype.moveToInput = function (inputName) {
@@ -204,7 +226,8 @@ ConversationConnection.prototype.moveToInput = function (inputName) {
   var input = this.conversation.inputs[this.conversationInput];
   this.systemTextInput.animateInput(
     input.text,
-    input.prewait || this.conversation.allInputs.prewait || 0
+    input.prewait || this.conversation.allInputs.prewait || 0,
+    input.postwait || this.conversation.allInputs.postwait || 0
   );
 };
 

@@ -11,7 +11,7 @@ prodfiles="${prodfiles} connection.js"
 prodfiles="${prodfiles} connection_rails.js"
 prodfiles="${prodfiles} game.js"
 
-devfiles="phaser.js underscore.js ${prodfiles}"
+devfiles="${prodfiles}"
 
 function adddev {
 	echo " Adding $1"

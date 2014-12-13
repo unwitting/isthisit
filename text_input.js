@@ -23,47 +23,58 @@ function SystemControlledTextInput(
   TextInput.call(this, gameEnv, x, y);
   this.animateFinishCb = animateFinishCb;
   this.animateFinishCbContext = animateFinishCbContext;
-  this.resetAnimateInput();
+  this.reset();
 }
 SystemControlledTextInput.prototype = Object.create(TextInput.prototype);
 SystemControlledTextInput.prototype.constructor = SystemControlledTextInput;
 
-SystemControlledTextInput.prototype.animateInput = function (text, prewait) {
-  this.resetAnimateInput();
+SystemControlledTextInput.prototype.animateInput = function (text, prewait, postwait) {
+  this.reset();
   this.animation.animating = true;
   this.animation.prewait = prewait;
+  this.animation.postwait = postwait;
   this.animation.targetText = text;
 };
 
-SystemControlledTextInput.prototype.resetAnimateInput = function () {
+SystemControlledTextInput.prototype.reset = function () {
   this.text = '';
   this.animation = {
     animating: false,
     lastUpdate: new Date(),
     prewait: 0,
+    postwait: 0,
     prewaiting: true,
+    postwaiting: false,
     renderPeriod: 35,
     targetText: ''
   };
 };
 
 SystemControlledTextInput.prototype.update = function () {
+  if (!this.animation.animating) {
+    return;
+  }
   var now = new Date();
   if (this.animation.prewaiting &&
       now - this.animation.lastUpdate > this.animation.prewait) {
     this.animation.prewaiting = false;
   }
-  if (this.animation.animating && !this.animation.prewaiting) {
+  if (!this.animation.prewaiting && !this.animation.postwaiting) {
     if (now - this.animation.lastUpdate > this.animation.renderPeriod) {
       if (this.text.length < this.animation.targetText.length) {
         this.text += this.animation.targetText.charAt(this.text.length);
       }
       if (this.text.length === this.animation.targetText.length) {
-        this.animation.animating = false;
-        this.animateFinishCb.call(this.animateFinishCbContext);
+        this.animation.postwaiting = true;
       }
       this.animation.lastUpdate = now;
     }
+  }
+  if (this.animation.postwaiting &&
+      now - this.animation.lastUpdate > this.animation.postwait) {
+    this.animation.animating = false;
+    this.animation.postwaiting = false;
+    this.animateFinishCb.call(this.animateFinishCbContext);
   }
 };
 
