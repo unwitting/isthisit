@@ -2,11 +2,6 @@
 outdev=isthisit.dev.js
 outprod=isthisit.js
 
-PROD_BUILD=1
-if [ "$1" == "noprod" ]; then
-	PROD_BUILD=0
-fi
-
 files="${files} underscore.js"
 files="${files} phaser.js"
 files="${files} expando_circle.js"
@@ -24,7 +19,7 @@ function adddev {
 }
 function addprod {
 	echo " Adding $1"
-	cat $1 | sed "s/DEV_MODE = true/DEV_MODE = false/" | ./node_modules/.bin/uglifyjs >> ${outprod}
+	cat $1 | sed "s/DEV_MODE = true/DEV_MODE = false/" >> ${outprod}
 	echo "" >> ${outprod}
 }
 echo "Building ${outdev}"
@@ -33,12 +28,8 @@ for f in ${files}; do
 	adddev ${f}
 done
 echo "Built ${outdev}"
-if [ "${PROD_BUILD}" != "0" ]; then
-	echo "Installing build dependencies"
-	npm i
-	echo "Building ${outprod}"
-	for f in ${files}; do
-		addprod ${f}
-	done
-	echo "Built ${outprod}"
-fi
+echo "Building ${outprod}"
+for f in ${files}; do
+	addprod ${f}
+done
+echo "Built ${outprod}"
