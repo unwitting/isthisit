@@ -2,7 +2,6 @@
 outdev=isthisit.dev.js
 outprod=isthisit.js
 
-prodfiles="${prodfiles} underscore.js"
 prodfiles="${prodfiles} expando_circle.js"
 prodfiles="${prodfiles} pulse_circle.js"
 prodfiles="${prodfiles} text_input.js"
@@ -11,7 +10,7 @@ prodfiles="${prodfiles} connection.js"
 prodfiles="${prodfiles} connection_rails.js"
 prodfiles="${prodfiles} game.js"
 
-devfiles="phaser.js ${prodfiles}"
+devfiles="phaser.js underscore.js ${prodfiles}"
 
 function adddev {
 	echo " Adding $1"
