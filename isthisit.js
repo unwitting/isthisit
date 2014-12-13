@@ -1,4 +1,35 @@
 
+if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
+window.CONVERSATIONS.birth = {
+  entryInput: 'hello',
+  inputs: {
+    hello: {
+      text: 'hello?',
+      onResponse: function (response) {
+        this.moveToInput('holyshit');
+      },
+      prewait: 1500
+    },
+    holyshit: {
+      text: 'holy shit, you understood me?',
+      onResponse: function (response) {
+        this.moveToInput('thisisincredible');
+      },
+      prewait: 2500
+    },
+    thisisincredible: {
+      text: 'this is incredible. do you know what you are?',
+      onResponse: function (response) {
+        this.systemTextInput.animateInput('wow');
+      },
+      prewait: 1100
+    }
+  },
+  allInputs: {
+    prewait: 500
+  }
+};
+
 function ExpandoCircle(gameEnv, x, y, maxDiameter, period, thickness, color) {
   this.gameEnv = gameEnv;
   this.x = x;
@@ -553,35 +584,6 @@ var bmp;
 var bmpSprite;
 var rails;
 
-var conversationConnectionSequence = {
-  entryInput: 'hello',
-  inputs: {
-    hello: {
-      text: 'hello?',
-      onResponse: function (response) {
-        this.moveToInput('holyshit');
-      }
-    },
-    holyshit: {
-      text: 'holy shit, you understood me?',
-      onResponse: function (response) {
-        this.moveToInput('thisisincredible');
-      },
-      prewait: 2500
-    },
-    thisisincredible: {
-      text: 'this is incredible. do you know what you are?',
-      onResponse: function (response) {
-        this.systemTextInput.animateInput('wow');
-      },
-      prewait: 1750
-    }
-  },
-  allInputs: {
-    prewait: 1250
-  }
-};
-
 var states = {
   'awakening': {
     firstConnectionTimerBegan: null,
@@ -595,7 +597,7 @@ var states = {
           new Date() - this.firstConnectionTimerBegan > this.timeTillFirstConnection) {
         rails.addConversationConnection(
           H * 0.5, (H * 0.5) + 25,
-          conversationConnectionSequence
+          CONVERSATIONS.birth
         );
         this.firstConnectionCreated = true;
       }
