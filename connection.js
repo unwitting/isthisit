@@ -185,6 +185,11 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
 ConversationConnection.prototype = Object.create(Connection.prototype);
 ConversationConnection.prototype.constructor = ConversationConnection;
 
+ConversationConnection.prototype.deselect = function () {
+  Connection.prototype.deselect.call(this);
+  this.userTextInput.forceNoListen = true;
+};
+
 ConversationConnection.prototype.handleSystemTextFinished = function () {
   this.userTextInput.listening = true;
 };
@@ -228,6 +233,11 @@ ConversationConnection.prototype.renderExteriorLineOut = function () {
   } else {
     Connection.prototype.renderExteriorLineOut.call(this);
   }
+};
+
+ConversationConnection.prototype.select = function () {
+  Connection.prototype.select.call(this);
+  this.userTextInput.forceNoListen = false;
 };
 
 ConversationConnection.prototype.update = function () {

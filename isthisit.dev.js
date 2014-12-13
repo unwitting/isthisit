@@ -89326,8 +89326,9 @@ function UserControlledTextInput(gameEnv, x, y, submitCb, submitCbContext) {
   this.submitCb = submitCb;
   this.submitCbContext = submitCbContext;
   this.listening = false;
+  this.forceNoListen = false;
   document.addEventListener('isthisit-keyinput', function (key) {
-    if (!that.listening) {
+    if (that.forceNoListen || !that.listening) {
       return;
     }
     that.captureInput(key.detail);
@@ -89337,7 +89338,7 @@ UserControlledTextInput.prototype = Object.create(TextInput.prototype);
 UserControlledTextInput.prototype.constructor = UserControlledTextInput;
 
 UserControlledTextInput.prototype.captureInput = function (key) {
-  if (key === 'BACKSPACE' && this.text.length > 0) {
+  if (key === 'BACKSPACE') {
     this.text = this.text.substr(0, this.text.length - 1);
   } else if (key === 'ENTER') {
     var text = this.text;
@@ -89595,6 +89596,11 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
 ConversationConnection.prototype = Object.create(Connection.prototype);
 ConversationConnection.prototype.constructor = ConversationConnection;
 
+ConversationConnection.prototype.deselect = function () {
+  Connection.prototype.deselect.call(this);
+  this.userTextInput.forceNoListen = true;
+};
+
 ConversationConnection.prototype.handleSystemTextFinished = function () {
   this.userTextInput.listening = true;
 };
@@ -89638,6 +89644,11 @@ ConversationConnection.prototype.renderExteriorLineOut = function () {
   } else {
     Connection.prototype.renderExteriorLineOut.call(this);
   }
+};
+
+ConversationConnection.prototype.select = function () {
+  Connection.prototype.select.call(this);
+  this.userTextInput.forceNoListen = false;
 };
 
 ConversationConnection.prototype.update = function () {

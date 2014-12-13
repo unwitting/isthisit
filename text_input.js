@@ -73,8 +73,9 @@ function UserControlledTextInput(gameEnv, x, y, submitCb, submitCbContext) {
   this.submitCb = submitCb;
   this.submitCbContext = submitCbContext;
   this.listening = false;
+  this.forceNoListen = false;
   document.addEventListener('isthisit-keyinput', function (key) {
-    if (!that.listening) {
+    if (that.forceNoListen || !that.listening) {
       return;
     }
     that.captureInput(key.detail);
