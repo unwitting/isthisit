@@ -36,7 +36,7 @@ window.CONVERSATIONS.birth = {
       text: 'ha, i guess i don\'t have to tell you to wait, you\'re _my_ computer',
       onOutputFinished: function () {
         this.close();
-        state = states.escape;
+        setTimeout(function () {state = states.escape;}, 2000);
       },
       prewait: 500,
       postwait: 2500
