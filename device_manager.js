@@ -15,6 +15,11 @@ DeviceManager.prototype.addDevice = function(type) {
       device = new USBStorageDevice(this.gameEnv, this);
       break;
   }
+  var that = this;
+  var spacing = 60;
+  var total = spacing * this.devices.length;
+  var left = this.x - (total / 2);
+  device.updateCircle(left + (spacing * this.devices.length), that.y);
   this.devices.push(device);
   return device;
 };
@@ -34,9 +39,15 @@ DeviceManager.prototype.render = function () {
   var left = this.x - (total / 2);
   _.each(this.devices, function (dev, i) {
     dev.render(left + (spacing * i), that.y);
-  })
+  });
 };
 
 DeviceManager.prototype.update = function () {
-  _.invoke(this.devices, 'update');
+  var that = this;
+  var spacing = 60;
+  var total = spacing * this.devices.length;
+  var left = this.x - (total / 2);
+  _.each(this.devices, function (dev, i) {
+    dev.update(left + (spacing * i), that.y);
+  });
 };

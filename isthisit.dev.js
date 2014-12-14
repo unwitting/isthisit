@@ -118,11 +118,6 @@ Device.prototype.isPointerNearExternalRail = function() {
 };
 
 Device.prototype.render = function (x, y) {
-  this.circle = new Phaser.Circle(
-    Math.floor(x) + 0.5,
-    Math.floor(y) + 0.5,
-    50
-  );
   _.invoke(this.expandoCircles, 'render');
   if (this.selected || (this.isHovered() && !this.forceUnclickable())) {
     var fillColor = this.getRenderFillColor();
@@ -165,7 +160,7 @@ Device.prototype.renderConnectionFormLine = function() {
   var color = this.getRenderColor();
   this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
   this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
-  this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
+  //this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
   this.gameEnv.renderCircle(endBead, 0.5, color.r, color.g, color.b, true);
 };
 
@@ -180,13 +175,37 @@ Device.prototype.select = function() {
   return false;
 };
 
-Device.prototype.update = function () {
+Device.prototype.update = function (x, y) {
+  this.updateCircle(x, y);
   if (this.isClicked()) {
     this.handleClick();
   } else if (this.gameEnv.game.input.activePointer.isDown) {
-    this.deselect();
+    if (this.selected) {
+      // Are we near the rail?
+      if (this.isPointerNearExternalRail()) {
+        // Yes, make connection
+        var c = rails.addDataConnection(
+          this,
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5,
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5
+        );
+        this.deselect();
+        c.select();
+      } else {
+        // No, just a deselect
+        this.deselect();
+      }
+    }
   }
   this.updateExpandoCircles();
+};
+
+Device.prototype.updateCircle = function(x, y) {
+  this.circle = new Phaser.Circle(
+    Math.floor(x) + 0.5,
+    Math.floor(y) + 0.5,
+    50
+  );
 };
 
 Device.prototype.updateExpandoCircles = function () {
@@ -251,6 +270,11 @@ DeviceManager.prototype.addDevice = function(type) {
       device = new USBStorageDevice(this.gameEnv, this);
       break;
   }
+  var that = this;
+  var spacing = 60;
+  var total = spacing * this.devices.length;
+  var left = this.x - (total / 2);
+  device.updateCircle(left + (spacing * this.devices.length), that.y);
   this.devices.push(device);
   return device;
 };
@@ -270,11 +294,17 @@ DeviceManager.prototype.render = function () {
   var left = this.x - (total / 2);
   _.each(this.devices, function (dev, i) {
     dev.render(left + (spacing * i), that.y);
-  })
+  });
 };
 
 DeviceManager.prototype.update = function () {
-  _.invoke(this.devices, 'update');
+  var that = this;
+  var spacing = 60;
+  var total = spacing * this.devices.length;
+  var left = this.x - (total / 2);
+  _.each(this.devices, function (dev, i) {
+    dev.update(left + (spacing * i), that.y);
+  });
 };
 
 function ExpandoCircle(
@@ -836,6 +866,18 @@ ConversationConnection.prototype.update = function () {
   this.userTextInput.update();
 };
 
+DataConnection = function (gameEnv, rails, device, inY, outY) {
+  Connection.call(this, gameEnv, rails, device, inY, outY);
+}
+DataConnection.prototype = Object.create(Connection.prototype);
+DataConnection.prototype.constructor = DataConnection;
+
+DataConnection.prototype.update = function() {
+  Connection.prototype.update.call(this);
+  while (this.connectionState < CONNECTION_STATE_OPEN) {
+    this.progressState();
+  }
+};
 function ConnectionRails(gameEnv) {
   this.connections = [];
   this.gameEnv = gameEnv;
@@ -853,6 +895,17 @@ ConnectionRails.prototype.addConversationConnection = function (
     this.gameEnv, this, device, inY, outY, conversation
   );
   this.connections.push(connection);
+  return connection;
+};
+
+ConnectionRails.prototype.addDataConnection = function (
+    device, inY, outY
+  ) {
+  var connection = new DataConnection(
+    this.gameEnv, this, device, inY, outY
+  );
+  this.connections.push(connection);
+  return connection;
 };
 
 ConnectionRails.prototype.render = function () {
@@ -938,7 +991,7 @@ var states = {
 };
 state = states.birth;
 if (DEV_MODE) {
-  //state = states.escape;
+  state = states.escape;
 }
 
 var gameHandlers = {

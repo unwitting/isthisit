@@ -15,6 +15,17 @@ ConnectionRails.prototype.addConversationConnection = function (
     this.gameEnv, this, device, inY, outY, conversation
   );
   this.connections.push(connection);
+  return connection;
+};
+
+ConnectionRails.prototype.addDataConnection = function (
+    device, inY, outY
+  ) {
+  var connection = new DataConnection(
+    this.gameEnv, this, device, inY, outY
+  );
+  this.connections.push(connection);
+  return connection;
 };
 
 ConnectionRails.prototype.render = function () {

@@ -117,11 +117,6 @@ Device.prototype.isPointerNearExternalRail = function() {
 };
 
 Device.prototype.render = function (x, y) {
-  this.circle = new Phaser.Circle(
-    Math.floor(x) + 0.5,
-    Math.floor(y) + 0.5,
-    50
-  );
   _.invoke(this.expandoCircles, 'render');
   if (this.selected || (this.isHovered() && !this.forceUnclickable())) {
     var fillColor = this.getRenderFillColor();
@@ -164,7 +159,7 @@ Device.prototype.renderConnectionFormLine = function() {
   var color = this.getRenderColor();
   this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
   this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
-  this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
+  //this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
   this.gameEnv.renderCircle(endBead, 0.5, color.r, color.g, color.b, true);
 };
 
@@ -179,13 +174,37 @@ Device.prototype.select = function() {
   return false;
 };
 
-Device.prototype.update = function () {
+Device.prototype.update = function (x, y) {
+  this.updateCircle(x, y);
   if (this.isClicked()) {
     this.handleClick();
   } else if (this.gameEnv.game.input.activePointer.isDown) {
-    this.deselect();
+    if (this.selected) {
+      // Are we near the rail?
+      if (this.isPointerNearExternalRail()) {
+        // Yes, make connection
+        var c = rails.addDataConnection(
+          this,
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5,
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5
+        );
+        this.deselect();
+        c.select();
+      } else {
+        // No, just a deselect
+        this.deselect();
+      }
+    }
   }
   this.updateExpandoCircles();
+};
+
+Device.prototype.updateCircle = function(x, y) {
+  this.circle = new Phaser.Circle(
+    Math.floor(x) + 0.5,
+    Math.floor(y) + 0.5,
+    50
+  );
 };
 
 Device.prototype.updateExpandoCircles = function () {

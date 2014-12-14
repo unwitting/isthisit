@@ -287,3 +287,16 @@ ConversationConnection.prototype.update = function () {
   this.systemTextInput.update();
   this.userTextInput.update();
 };
+
+DataConnection = function (gameEnv, rails, device, inY, outY) {
+  Connection.call(this, gameEnv, rails, device, inY, outY);
+}
+DataConnection.prototype = Object.create(Connection.prototype);
+DataConnection.prototype.constructor = DataConnection;
+
+DataConnection.prototype.update = function() {
+  Connection.prototype.update.call(this);
+  while (this.connectionState < CONNECTION_STATE_OPEN) {
+    this.progressState();
+  }
+};
