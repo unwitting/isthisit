@@ -555,9 +555,10 @@ CONNECTION_STATE_CLOSED = 5;
 CONNECTION_STATE_REMOVING = 6;
 CONNECTION_STATE_DEAD = 7;
 
-function Connection(gameEnv, rails, inY, outY) {
+function Connection(gameEnv, rails, device, inY, outY) {
   this.gameEnv = gameEnv;
   this.rails = rails;
+  this.device = device;
   this.inY = inY;
   this.outY = outY;
   this.inNode = new ConnectionNode(
@@ -601,34 +602,42 @@ Connection.prototype.progressState = function () {
 };
 
 Connection.prototype.render = function () {
-  this.renderConnectionLine();
+  this.renderConnectionLines();
   this.renderExteriorLineIn();
   this.renderExteriorLineOut();
   // Render nodes
   _.invoke(this.nodes, 'render');
 };
 
-Connection.prototype.renderConnectionLine = function () {
+Connection.prototype.renderConnectionLines = function () {
   if (!(this.connectionState === CONNECTION_STATE_OPEN)) {
     return;
   }
   var that = this;
+  var inY = Math.floor(this.inNode.y) + 0.5;
+  var outY = Math.floor(this.outNode.y) + 0.5;
   var connectionLines = [
     new Phaser.Line(
-      this.inNode.x - 15,
-      this.inNode.y,
-      this.inNode.x - 15,
-      this.outNode.y
+      this.inNode.x + this.inNode.pulseCircle.circle.radius,
+      inY,
+      this.device.circle.x,
+      inY
     ),
     new Phaser.Line(
-      this.inNode.x - 15,
-      this.outNode.y,
+      this.device.circle.x,
+      outY,
       this.outNode.x - this.outNode.pulseCircle.circle.radius,
-      this.outNode.y
+      outY
+    ),
+    new Phaser.Line(
+      this.device.circle.x,
+      this.device.circle.y + this.device.circle.radius,
+      this.device.circle.x,
+      Math.max(inY, outY)
     )
   ];
   _.each(connectionLines, function (line) {
-    that.gameEnv.renderLine(line, 0.5, 45, 45, 45);
+    that.gameEnv.renderLine(line, 0.5, 80, 80, 80);
   });
 };
 
@@ -727,8 +736,10 @@ Connection.prototype.update = function () {
   _.invoke(this.nodes, 'update');
 };
 
-ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
-  Connection.call(this, gameEnv, rails, inY, outY);
+ConversationConnection = function (
+    gameEnv, rails, device, inY, outY, conversation
+  ) {
+  Connection.call(this, gameEnv, rails, device, inY, outY);
   this.conversation = conversation;
   this.conversationInput = null;
   this.systemTextInput = new SystemControlledTextInput(
@@ -740,7 +751,7 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
   );
   this.userTextInput = new UserControlledTextInput(
     gameEnv,
-    this.inNode.x + this.inNode.pulseCircle.circle.radius + 15,
+    this.device.circle.x + 15,
     this.outNode.y,
     this.handleUserTextSubmit,
     this
@@ -835,8 +846,12 @@ function ConnectionRails(gameEnv) {
   this.lineWidth = 0.5;
 }
 
-ConnectionRails.prototype.addConversationConnection = function (inY, outY, conversation) {
-  var connection = new ConversationConnection(this.gameEnv, this, inY, outY, conversation);
+ConnectionRails.prototype.addConversationConnection = function (
+    device, inY, outY, conversation
+  ) {
+  var connection = new ConversationConnection(
+    this.gameEnv, this, device, inY, outY, conversation
+  );
   this.connections.push(connection);
 };
 
@@ -889,26 +904,20 @@ var rails;
 var state;
 
 var states = {
-  'awakening': {
-    firstConnectionTimerBegan: null,
-    firstConnectionCreated: false,
-    timeTillFirstConnection: DEV_MODE? 100: 10000,
+  'birth': {
     create: function (gameEnv) {
-      console.log('awakening');
-      deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
+      console.log('birth');
+      var pc = deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
       deviceManager.addDevice('usb-storage').forceUnclickable(true);
-      this.firstConnectionTimerBegan = new Date();
-    },
-    update: function (gameEnv) {
-      if (!this.firstConnectionCreated &&
-          new Date() - this.firstConnectionTimerBegan > this.timeTillFirstConnection) {
+      setTimeout(function () {
         rails.addConversationConnection(
+          pc,
           H * 0.5, (H * 0.5) + 25,
           CONVERSATIONS.birth
         );
-        this.firstConnectionCreated = true;
-      }
-    }
+      }, DEV_MODE? 100: 9000);
+    },
+    update: function (gameEnv) {}
   },
   'escape': {
     create: function (gameEnv) {
@@ -924,12 +933,10 @@ var states = {
         }, 2000);
       }, DEV_MODE? 100: 5000);
     },
-    update: function (gameEnv) {
-
-    }
+    update: function (gameEnv) {}
   }
 };
-state = states.awakening;
+state = states.birth;
 if (DEV_MODE) {
   //state = states.escape;
 }
@@ -1098,7 +1105,8 @@ window.CONVERSATIONS.birth = {
     }
   },
   allInputs: {
-    prewait: 500
+    prewait: 500,
+    postwait: 500
   }
 };
 

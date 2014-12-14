@@ -43,6 +43,7 @@ window.CONVERSATIONS.birth = {
     }
   },
   allInputs: {
-    prewait: 500
+    prewait: 500,
+    postwait: 500
   }
 };

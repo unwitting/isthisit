@@ -7,9 +7,10 @@ CONNECTION_STATE_CLOSED = 5;
 CONNECTION_STATE_REMOVING = 6;
 CONNECTION_STATE_DEAD = 7;
 
-function Connection(gameEnv, rails, inY, outY) {
+function Connection(gameEnv, rails, device, inY, outY) {
   this.gameEnv = gameEnv;
   this.rails = rails;
+  this.device = device;
   this.inY = inY;
   this.outY = outY;
   this.inNode = new ConnectionNode(
@@ -53,34 +54,42 @@ Connection.prototype.progressState = function () {
 };
 
 Connection.prototype.render = function () {
-  this.renderConnectionLine();
+  this.renderConnectionLines();
   this.renderExteriorLineIn();
   this.renderExteriorLineOut();
   // Render nodes
   _.invoke(this.nodes, 'render');
 };
 
-Connection.prototype.renderConnectionLine = function () {
+Connection.prototype.renderConnectionLines = function () {
   if (!(this.connectionState === CONNECTION_STATE_OPEN)) {
     return;
   }
   var that = this;
+  var inY = Math.floor(this.inNode.y) + 0.5;
+  var outY = Math.floor(this.outNode.y) + 0.5;
   var connectionLines = [
     new Phaser.Line(
-      this.inNode.x - 15,
-      this.inNode.y,
-      this.inNode.x - 15,
-      this.outNode.y
+      this.inNode.x + this.inNode.pulseCircle.circle.radius,
+      inY,
+      this.device.circle.x,
+      inY
     ),
     new Phaser.Line(
-      this.inNode.x - 15,
-      this.outNode.y,
+      this.device.circle.x,
+      outY,
       this.outNode.x - this.outNode.pulseCircle.circle.radius,
-      this.outNode.y
+      outY
+    ),
+    new Phaser.Line(
+      this.device.circle.x,
+      this.device.circle.y + this.device.circle.radius,
+      this.device.circle.x,
+      Math.max(inY, outY)
     )
   ];
   _.each(connectionLines, function (line) {
-    that.gameEnv.renderLine(line, 0.5, 45, 45, 45);
+    that.gameEnv.renderLine(line, 0.5, 80, 80, 80);
   });
 };
 
@@ -179,8 +188,10 @@ Connection.prototype.update = function () {
   _.invoke(this.nodes, 'update');
 };
 
-ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
-  Connection.call(this, gameEnv, rails, inY, outY);
+ConversationConnection = function (
+    gameEnv, rails, device, inY, outY, conversation
+  ) {
+  Connection.call(this, gameEnv, rails, device, inY, outY);
   this.conversation = conversation;
   this.conversationInput = null;
   this.systemTextInput = new SystemControlledTextInput(
@@ -192,7 +203,7 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
   );
   this.userTextInput = new UserControlledTextInput(
     gameEnv,
-    this.inNode.x + this.inNode.pulseCircle.circle.radius + 15,
+    this.device.circle.x + 15,
     this.outNode.y,
     this.handleUserTextSubmit,
     this

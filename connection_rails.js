@@ -8,8 +8,12 @@ function ConnectionRails(gameEnv) {
   this.lineWidth = 0.5;
 }
 
-ConnectionRails.prototype.addConversationConnection = function (inY, outY, conversation) {
-  var connection = new ConversationConnection(this.gameEnv, this, inY, outY, conversation);
+ConnectionRails.prototype.addConversationConnection = function (
+    device, inY, outY, conversation
+  ) {
+  var connection = new ConversationConnection(
+    this.gameEnv, this, device, inY, outY, conversation
+  );
   this.connections.push(connection);
 };
 

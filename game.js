@@ -24,26 +24,20 @@ var rails;
 var state;
 
 var states = {
-  'awakening': {
-    firstConnectionTimerBegan: null,
-    firstConnectionCreated: false,
-    timeTillFirstConnection: DEV_MODE? 100: 10000,
+  'birth': {
     create: function (gameEnv) {
-      console.log('awakening');
-      deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
+      console.log('birth');
+      var pc = deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
       deviceManager.addDevice('usb-storage').forceUnclickable(true);
-      this.firstConnectionTimerBegan = new Date();
-    },
-    update: function (gameEnv) {
-      if (!this.firstConnectionCreated &&
-          new Date() - this.firstConnectionTimerBegan > this.timeTillFirstConnection) {
+      setTimeout(function () {
         rails.addConversationConnection(
+          pc,
           H * 0.5, (H * 0.5) + 25,
           CONVERSATIONS.birth
         );
-        this.firstConnectionCreated = true;
-      }
-    }
+      }, DEV_MODE? 100: 9000);
+    },
+    update: function (gameEnv) {}
   },
   'escape': {
     create: function (gameEnv) {
@@ -59,12 +53,10 @@ var states = {
         }, 2000);
       }, DEV_MODE? 100: 5000);
     },
-    update: function (gameEnv) {
-
-    }
+    update: function (gameEnv) {}
   }
 };
-state = states.awakening;
+state = states.birth;
 if (DEV_MODE) {
   //state = states.escape;
 }
