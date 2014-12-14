@@ -41,6 +41,8 @@ for f in ${devfiles}; do
 done
 echo "Built ${outdev}"
 if [ "${noprod}" != "1" ]; then
+	echo "Installing build dependencies"
+	npm i
 	echo "Building ${outprod}"
 	echo "" > ${outprod}
 	for f in ${prodfiles}; do
