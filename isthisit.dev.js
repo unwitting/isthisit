@@ -31,6 +31,14 @@ Device.prototype.deselect = function() {
   }
 };
 
+Device.prototype.forceUnclickable = function(set) {
+  if (set !== undefined) {
+    this._forceUnclickable = set;
+    return this;
+  }
+  return this._forceUnclickable;
+};
+
 Device.prototype.getRenderColor = function() {
   var base = this.inhabited()?
     {r: 100, g: 255, b: 100}:
@@ -70,14 +78,6 @@ Device.prototype.getRenderFillColor = function() {
 
 Device.prototype.getYCutoff = function() {
   return this.circle.y + this.circle.radius + 10;
-};
-
-Device.prototype.forceUnclickable = function(set) {
-  if (set !== undefined) {
-    this._forceUnclickable = set;
-    return this;
-  }
-  return this._forceUnclickable;
 };
 
 Device.prototype.handleClick = function() {
