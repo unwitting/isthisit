@@ -2,7 +2,6 @@
 outdev=isthisit.dev.js
 outprod=isthisit.js
 
-prodfiles="${prodfiles} conversations/birth.js"
 prodfiles="${prodfiles} device.js"
 prodfiles="${prodfiles} device_manager.js"
 prodfiles="${prodfiles} expando_circle.js"
@@ -12,6 +11,7 @@ prodfiles="${prodfiles} connection_node.js"
 prodfiles="${prodfiles} connection.js"
 prodfiles="${prodfiles} connection_rails.js"
 prodfiles="${prodfiles} game.js"
+prodfiles="${prodfiles} conversations/birth.js"
 
 devfiles="${prodfiles}"
 
@@ -37,3 +37,5 @@ for f in ${prodfiles}; do
 	addprod ${f}
 done
 echo "Built ${outprod}"
+echo "Note: DEV_MODE mentions:"
+find . -name "*.js" | grep -v isthisit | xargs grep -v "var DEV_MODE =" | grep -A5 DEV_MODE
