@@ -127,7 +127,7 @@ Connection.prototype.select = function () {
     that.selected = true;
     _.invoke(
       _.filter(that.nodes, function (node) {return node.displayed;}),
-      'addExpandoCircle'
+      'addExpandoCircle', true
     );
     if (this.connectionState === CONNECTION_STATE_AWAITING_ACCEPT) {
       // A select is an accept, so move on

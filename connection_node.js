@@ -10,11 +10,13 @@ function ConnectionNode(gameEnv, connection, inNode, x, y, color) {
   this.displayed = false;
 }
 
-ConnectionNode.prototype.addExpandoCircle = function () {
+ConnectionNode.prototype.addExpandoCircle = function (fastSmall) {
+  fastSmall = fastSmall === undefined? false: fastSmall;
   var expandoCircle = new ExpandoCircle(
     this.gameEnv,
     this.x, this.y,
-    400, 1200,
+    fastSmall? 200: 400,
+    fastSmall? 1000: 2000,
     0.5, this.color
   );
   this.expandoCircles.push(expandoCircle);

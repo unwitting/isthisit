@@ -1,13 +1,38 @@
 
-function Device(gameEnv) {
+function Device(gameEnv, deviceManager) {
   this.gameEnv = gameEnv;
-  this.inhabited = false;
+  this.deviceManager = deviceManager;
+  this._forceUnclickable = false;
+  this._inhabited = false;
+  this.selected = false;
 }
 
+Device.prototype.deselect = function() {
+  if (this.selected) {
+    this.selected = false;
+  }
+};
+
 Device.prototype.getRenderColor = function() {
-  return this.inhabited?
+  var base = this.inhabited()?
     {r: 100, g: 255, b: 100}:
     {r: 100, g: 100, b: 100};
+  if (!this.selected) {
+    return base;
+  }
+  return {
+    r: Math.floor((base.r + 255) * 0.8),
+    g: Math.floor((base.g + 255) * 0.8),
+    b: Math.floor((base.b + 255) * 0.8)
+  };
+};
+
+Device.prototype.getRenderThicknessExterior = function() {
+  return this.selected? 1.5: 0.5;
+};
+
+Device.prototype.getRenderThicknessInterior = function() {
+  return 1.5;
 };
 
 Device.prototype.getRenderFillColor = function() {
@@ -25,8 +50,36 @@ Device.prototype.getRenderFillColor = function() {
   return fillColor;
 };
 
+Device.prototype.forceUnclickable = function(set) {
+  if (set !== undefined) {
+    this._forceUnclickable = set;
+    return this;
+  }
+  return this._forceUnclickable;
+};
+
+Device.prototype.handleClick = function() {
+  this.select();
+};
+
+Device.prototype.inhabited = function(set) {
+  if (set !== undefined) {
+    this._inhabited = set;
+    return this;
+  }
+  return this._inhabited;
+};
+
+Device.prototype.isClicked = function () {
+  return (
+    !this.forceUnclickable() &&
+    this.isHovered() &&
+    this.gameEnv.game.input.activePointer.isDown
+  );
+};
+
 Device.prototype.isHovered = function () {
-  return this.circle.contains(
+  return this.circle !== undefined && this.circle.contains(
     this.gameEnv.game.input.mousePointer.x,
     this.gameEnv.game.input.mousePointer.y
   );
@@ -34,26 +87,36 @@ Device.prototype.isHovered = function () {
 
 Device.prototype.render = function (x, y) {
   this.circle = new Phaser.Circle(x, y, 50);
-  if (this.isHovered()) {
+  if (this.selected || (this.isHovered() && !this.forceUnclickable())) {
     var fillColor = this.getRenderFillColor();
     this.gameEnv.renderCircle(
       this.circle,
-      0.5, fillColor.r, fillColor.g, fillColor.b, true
+      this.getRenderThicknessExterior(),
+      fillColor.r, fillColor.g, fillColor.b, true
     );
   }
   var color = this.getRenderColor();
   this.gameEnv.renderCircle(
     this.circle,
-    0.5, color.r, color.g, color.b
+    this.getRenderThicknessExterior(), color.r, color.g, color.b
   );
 };
 
-Device.prototype.update = function () {
-  
+Device.prototype.select = function() {
+  if (!this.selected) {
+    this.deviceManager.deselectAll();
+    this.selected = true;
+  }
 };
 
-function PCDevice(gameEnv) {
-  Device.call(this, gameEnv);
+Device.prototype.update = function () {
+  if (this.isClicked()) {
+    this.handleClick();
+  }
+};
+
+function PCDevice(gameEnv, deviceManager) {
+  Device.call(this, gameEnv, deviceManager);
 }
 PCDevice.prototype = Object.create(Device.prototype);
 PCDevice.prototype.constructor = PCDevice;
@@ -62,15 +125,17 @@ PCDevice.prototype.render = function (x, y) {
   Device.prototype.render.call(this, x, y);
   var color = this.getRenderColor();
   this.gameEnv.renderRect(
-    x - 12.5, y - 16.5, 25, 20, 1.5, color.r, color.g, color.b
+    x - 12.5, y - 16.5, 25, 20,
+    this.getRenderThicknessInterior(), color.r, color.g, color.b
   );
   this.gameEnv.renderRect(
-    x - 16.5, y + 3.5, 33, 10, 1.5, color.r, color.g, color.b
+    x - 16.5, y + 3.5, 33, 10,
+    this.getRenderThicknessInterior(), color.r, color.g, color.b
   );
 };
 
-function USBStorageDevice(gameEnv) {
-  Device.call(this, gameEnv);
+function USBStorageDevice(gameEnv, deviceManager) {
+  Device.call(this, gameEnv, deviceManager);
 }
 USBStorageDevice.prototype = Object.create(Device.prototype);
 USBStorageDevice.prototype.constructor = USBStorageDevice;
@@ -79,10 +144,12 @@ USBStorageDevice.prototype.render = function (x, y) {
   Device.prototype.render.call(this, x, y);
   var color = this.getRenderColor();
   this.gameEnv.renderRect(
-    x - 18.5, y - 8, 30, 16, 1.5, color.r, color.g, color.b
+    x - 18.5, y - 8, 30, 16,
+    this.getRenderThicknessInterior(), color.r, color.g, color.b
   );
   this.gameEnv.renderRect(
-    x + 11.5, y - 5, 8, 10, 1.5, color.r, color.g, color.b
+    x + 11.5, y - 5, 8, 10,
+    this.getRenderThicknessInterior(), color.r, color.g, color.b
   );
 };
 
@@ -97,14 +164,18 @@ DeviceManager.prototype.addDevice = function(type) {
   var device;
   switch (type) {
     case 'pc':
-      device = new PCDevice(this.gameEnv);
+      device = new PCDevice(this.gameEnv, this);
       break;
     case 'usb-storage':
-      device = new USBStorageDevice(this.gameEnv);
+      device = new USBStorageDevice(this.gameEnv, this);
       break;
   }
   this.devices.push(device);
   return device;
+};
+
+DeviceManager.prototype.deselectAll = function () {
+  _.invoke(this.devices, 'deselect');
 };
 
 DeviceManager.prototype.render = function () {
@@ -332,11 +403,13 @@ function ConnectionNode(gameEnv, connection, inNode, x, y, color) {
   this.displayed = false;
 }
 
-ConnectionNode.prototype.addExpandoCircle = function () {
+ConnectionNode.prototype.addExpandoCircle = function (fastSmall) {
+  fastSmall = fastSmall === undefined? false: fastSmall;
   var expandoCircle = new ExpandoCircle(
     this.gameEnv,
     this.x, this.y,
-    400, 1200,
+    fastSmall? 200: 400,
+    fastSmall? 1000: 2000,
     0.5, this.color
   );
   this.expandoCircles.push(expandoCircle);
@@ -510,7 +583,7 @@ Connection.prototype.select = function () {
     that.selected = true;
     _.invoke(
       _.filter(that.nodes, function (node) {return node.displayed;}),
-      'addExpandoCircle'
+      'addExpandoCircle', true
     );
     if (this.connectionState === CONNECTION_STATE_AWAITING_ACCEPT) {
       // A select is an accept, so move on
@@ -747,7 +820,7 @@ var states = {
     create: function (gameEnv) {
       console.log('escape');
       deviceManager = new DeviceManager(gameEnv, W / 2, 50);
-      deviceManager.addDevice('pc').inhabited = true;
+      deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
       deviceManager.addDevice('usb-storage');
     },
     update: function (gameEnv) {
