@@ -1,7 +1,7 @@
 if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
 
 window.CONVERSATIONS.birth = {
-  entryInput: 'hello',
+  entryInput: DEV_MODE? 'donthavetotellyou': 'hello',
   inputs: {
     hello: {
       text: 'hello?',

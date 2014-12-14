@@ -16,6 +16,7 @@ DeviceManager.prototype.addDevice = function(type) {
       break;
   }
   this.devices.push(device);
+  return device;
 };
 
 DeviceManager.prototype.render = function () {

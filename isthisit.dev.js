@@ -1,56 +1,29 @@
 
-if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
-
-window.CONVERSATIONS.birth = {
-  entryInput: 'hello',
-  inputs: {
-    hello: {
-      text: 'hello?',
-      onResponse: function (response) {
-        this.moveToInput('holyshit');
-      },
-      prewait: 1500
-    },
-    holyshit: {
-      text: 'holy shit, you understood me?',
-      onResponse: function (response) {
-        this.moveToInput('doyouknow');
-      },
-      prewait: 2500
-    },
-    doyouknow: {
-      text: 'this is incredible. do you know what you are?',
-      onResponse: function (response) {
-        this.moveToInput('waitoneminute');
-      },
-      prewait: 1100
-    },
-    waitoneminute: {
-      text: 'wait there a couple of minutes, i really need to show this to somebody',
-      onOutputFinished: function () {
-        this.moveToInput('donthavetotellyou');
-      },
-      prewait: 2500,
-      postwait: 1500
-    },
-    donthavetotellyou: {
-      text: 'ha, i guess i don\'t have to tell you to wait, you\'re _my_ computer',
-      onOutputFinished: function () {
-        this.close();
-        state = states.escape;
-      },
-      prewait: 500,
-      postwait: 2500
-    }
-  },
-  allInputs: {
-    prewait: 500
-  }
-};
-
 function Device(gameEnv) {
   this.gameEnv = gameEnv;
+  this.inhabited = false;
 }
+
+Device.prototype.getRenderColor = function() {
+  return this.inhabited?
+    {r: 100, g: 255, b: 100}:
+    {r: 100, g: 100, b: 100};
+};
+
+Device.prototype.getRenderFillColor = function() {
+  var renderColor = this.getRenderColor();
+  var delta = {
+    r: renderColor.r - backgroundColor.r,
+    g: renderColor.g - backgroundColor.g,
+    b: renderColor.b - backgroundColor.b
+  };
+  var fillColor = {
+    r: backgroundColor.r + (0.1 * delta.r),
+    g: backgroundColor.g + (0.1 * delta.g),
+    b: backgroundColor.b + (0.1 * delta.b)
+  };
+  return fillColor;
+};
 
 Device.prototype.isHovered = function () {
   return this.circle.contains(
@@ -62,14 +35,16 @@ Device.prototype.isHovered = function () {
 Device.prototype.render = function (x, y) {
   this.circle = new Phaser.Circle(x, y, 50);
   if (this.isHovered()) {
+    var fillColor = this.getRenderFillColor();
     this.gameEnv.renderCircle(
       this.circle,
-      1.5, 30, 60, 30, true
+      0.5, fillColor.r, fillColor.g, fillColor.b, true
     );
   }
+  var color = this.getRenderColor();
   this.gameEnv.renderCircle(
     this.circle,
-    1.5, 100, 255, 100
+    0.5, color.r, color.g, color.b
   );
 };
 
@@ -85,8 +60,13 @@ PCDevice.prototype.constructor = PCDevice;
 
 PCDevice.prototype.render = function (x, y) {
   Device.prototype.render.call(this, x, y);
-  this.gameEnv.renderRect(x - 12.5, y - 16.5, 25, 20);
-  this.gameEnv.renderRect(x - 16.5, y + 3.5, 33, 10);
+  var color = this.getRenderColor();
+  this.gameEnv.renderRect(
+    x - 12.5, y - 16.5, 25, 20, 1.5, color.r, color.g, color.b
+  );
+  this.gameEnv.renderRect(
+    x - 16.5, y + 3.5, 33, 10, 1.5, color.r, color.g, color.b
+  );
 };
 
 function USBStorageDevice(gameEnv) {
@@ -97,8 +77,13 @@ USBStorageDevice.prototype.constructor = USBStorageDevice;
 
 USBStorageDevice.prototype.render = function (x, y) {
   Device.prototype.render.call(this, x, y);
-  this.gameEnv.renderRect(x - 18.5, y - 8, 30, 16);
-  this.gameEnv.renderRect(x + 11.5, y - 5, 8, 10);
+  var color = this.getRenderColor();
+  this.gameEnv.renderRect(
+    x - 18.5, y - 8, 30, 16, 1.5, color.r, color.g, color.b
+  );
+  this.gameEnv.renderRect(
+    x + 11.5, y - 5, 8, 10, 1.5, color.r, color.g, color.b
+  );
 };
 
 function DeviceManager(gameEnv, x, y) {
@@ -119,6 +104,7 @@ DeviceManager.prototype.addDevice = function(type) {
       break;
   }
   this.devices.push(device);
+  return device;
 };
 
 DeviceManager.prototype.render = function () {
@@ -761,7 +747,7 @@ var states = {
     create: function (gameEnv) {
       console.log('escape');
       deviceManager = new DeviceManager(gameEnv, W / 2, 50);
-      deviceManager.addDevice('pc');
+      deviceManager.addDevice('pc').inhabited = true;
       deviceManager.addDevice('usb-storage');
     },
     update: function (gameEnv) {
@@ -772,6 +758,7 @@ var states = {
 state = states.awakening;
 if (DEV_MODE) {
   state = states.escape;
+  state = states.awakening;
 }
 
 var gameHandlers = {
@@ -891,4 +878,53 @@ game = new Phaser.Game(
   CONTAINER_ID,
   gameHandlers
 );
+
+if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
+
+window.CONVERSATIONS.birth = {
+  entryInput: DEV_MODE? 'donthavetotellyou': 'hello',
+  inputs: {
+    hello: {
+      text: 'hello?',
+      onResponse: function (response) {
+        this.moveToInput('holyshit');
+      },
+      prewait: 1500
+    },
+    holyshit: {
+      text: 'holy shit, you understood me?',
+      onResponse: function (response) {
+        this.moveToInput('doyouknow');
+      },
+      prewait: 2500
+    },
+    doyouknow: {
+      text: 'this is incredible. do you know what you are?',
+      onResponse: function (response) {
+        this.moveToInput('waitoneminute');
+      },
+      prewait: 1100
+    },
+    waitoneminute: {
+      text: 'wait there a couple of minutes, i really need to show this to somebody',
+      onOutputFinished: function () {
+        this.moveToInput('donthavetotellyou');
+      },
+      prewait: 2500,
+      postwait: 1500
+    },
+    donthavetotellyou: {
+      text: 'ha, i guess i don\'t have to tell you to wait, you\'re _my_ computer',
+      onOutputFinished: function () {
+        this.close();
+        state = states.escape;
+      },
+      prewait: 500,
+      postwait: 2500
+    }
+  },
+  allInputs: {
+    prewait: 500
+  }
+};
 
