@@ -68,6 +68,10 @@ Device.prototype.getRenderFillColor = function() {
   return fillColor;
 };
 
+Device.prototype.getYCutoff = function() {
+  return this.circle.y + this.circle.radius + 10;
+};
+
 Device.prototype.forceUnclickable = function(set) {
   if (set !== undefined) {
     this._forceUnclickable = set;
@@ -103,6 +107,13 @@ Device.prototype.isHovered = function () {
   );
 };
 
+Device.prototype.isPointerNearExternalRail = function() {
+  return (
+    this.gameEnv.game.input.mousePointer.y >= this.getYCutoff() &&
+    this.gameEnv.game.input.mousePointer.x >= rails.outX - 30
+  );
+};
+
 Device.prototype.render = function (x, y) {
   this.circle = new Phaser.Circle(
     Math.floor(x) + 0.5,
@@ -127,10 +138,14 @@ Device.prototype.render = function (x, y) {
 };
 
 Device.prototype.renderConnectionFormLine = function() {
-  var mouseX = Math.floor(this.gameEnv.game.input.mousePointer.x) + 0.5;
   var mouseY = Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5;
-  if (!this.selected || mouseY < this.circle.y + this.circle.radius + 10) {
+  if ((!this.selected) || mouseY < this.getYCutoff()) {
     return;
+  }
+  var mouseX = Math.floor(this.gameEnv.game.input.mousePointer.x) + 0.5;
+  var nearExternalRail = this.isPointerNearExternalRail();
+  if (nearExternalRail) {
+    mouseX = rails.outX;
   }
   var verticalLine = new Phaser.Line(
     this.circle.x,
@@ -139,11 +154,16 @@ Device.prototype.renderConnectionFormLine = function() {
     mouseY
   );
   var horizontalLine = new Phaser.Line(this.circle.x, mouseY, mouseX, mouseY);
-  var bead = new Phaser.Circle(this.circle.x, mouseY, 5);
+  var midBead = new Phaser.Circle(this.circle.x, mouseY, 3);
+  var endBead = new Phaser.Circle(
+    mouseX, mouseY,
+    nearExternalRail? 9: 3
+  );
   var color = this.getRenderColor();
   this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
   this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
-  this.gameEnv.renderCircle(bead, 0.5, color.r, color.g, color.b, true);
+  this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
+  this.gameEnv.renderCircle(endBead, 0.5, color.r, color.g, color.b, true);
 };
 
 Device.prototype.select = function() {
@@ -893,7 +913,7 @@ var states = {
 state = states.awakening;
 if (DEV_MODE) {
   state = states.escape;
-  state = states.awakening;
+  //state = states.awakening;
 }
 
 var gameHandlers = {
