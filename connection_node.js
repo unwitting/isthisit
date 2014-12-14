@@ -12,10 +12,13 @@ function ConnectionNode(gameEnv, connection, inNode, x, y, color) {
 
 ConnectionNode.prototype.addExpandoCircle = function (fastSmall) {
   fastSmall = fastSmall === undefined? false: fastSmall;
+  var minDiameter = this.pulseCircle.diameter;
+  var maxDiameter = minDiameter + (fastSmall? 200: 400);
   var expandoCircle = new ExpandoCircle(
     this.gameEnv,
     this.x, this.y,
-    fastSmall? 200: 400,
+    minDiameter,
+    maxDiameter,
     fastSmall? 1000: 2000,
     0.5, this.color
   );

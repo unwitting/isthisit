@@ -58,7 +58,7 @@ var states = {
 state = states.awakening;
 if (DEV_MODE) {
   state = states.escape;
-  //state = states.awakening;
+  state = states.awakening;
 }
 
 var gameHandlers = {

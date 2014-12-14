@@ -45,7 +45,7 @@ SystemControlledTextInput.prototype.reset = function () {
     postwait: 0,
     prewaiting: true,
     postwaiting: false,
-    renderPeriod: 35,
+    renderPeriod: 23,
     targetText: ''
   };
 };

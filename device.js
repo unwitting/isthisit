@@ -1,10 +1,28 @@
 function Device(gameEnv, deviceManager) {
   this.gameEnv = gameEnv;
   this.deviceManager = deviceManager;
+  this.circle = null;
   this._forceUnclickable = false;
   this._inhabited = false;
   this.selected = false;
+  this.expandoCircles = [];
 }
+
+Device.prototype.addExpandoCircle = function () {
+  if (!this.circle) {
+    return;
+  }
+  var expandoCircle = new ExpandoCircle(
+    this.gameEnv,
+    this.circle.x, this.circle.y,
+    this.circle.radius * 2,
+    (this.circle.radius * 2) + 400,
+    800,
+    0.5,
+    this.getRenderColor()
+  );
+  this.expandoCircles.push(expandoCircle);
+};
 
 Device.prototype.deselect = function() {
   if (this.selected) {
@@ -78,14 +96,19 @@ Device.prototype.isClicked = function () {
 };
 
 Device.prototype.isHovered = function () {
-  return this.circle !== undefined && this.circle.contains(
+  return this.circle && this.circle.contains(
     this.gameEnv.game.input.mousePointer.x,
     this.gameEnv.game.input.mousePointer.y
   );
 };
 
 Device.prototype.render = function (x, y) {
-  this.circle = new Phaser.Circle(x, y, 50);
+  this.circle = new Phaser.Circle(
+    Math.floor(x) + 0.5,
+    Math.floor(y) + 0.5,
+    50
+  );
+  _.invoke(this.expandoCircles, 'render');
   if (this.selected || (this.isHovered() && !this.forceUnclickable())) {
     var fillColor = this.getRenderFillColor();
     this.gameEnv.renderCircle(
@@ -99,12 +122,34 @@ Device.prototype.render = function (x, y) {
     this.circle,
     this.getRenderThicknessExterior(), color.r, color.g, color.b
   );
+  this.renderConnectionFormLine();
+};
+
+Device.prototype.renderConnectionFormLine = function() {
+  var mouseX = Math.floor(this.gameEnv.game.input.mousePointer.x) + 0.5;
+  var mouseY = Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5;
+  if (!this.selected || mouseY < this.circle.y + this.circle.radius + 10) {
+    return;
+  }
+  var verticalLine = new Phaser.Line(
+    this.circle.x,
+    this.circle.y + this.circle.radius,
+    this.circle.x,
+    mouseY
+  );
+  var horizontalLine = new Phaser.Line(this.circle.x, mouseY, mouseX, mouseY);
+  var bead = new Phaser.Circle(this.circle.x, mouseY, 5);
+  var color = this.getRenderColor();
+  this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
+  this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
+  this.gameEnv.renderCircle(bead, 0.5, color.r, color.g, color.b, true);
 };
 
 Device.prototype.select = function() {
   if (!this.selected) {
     this.deviceManager.deselectAll();
     this.selected = true;
+    this.addExpandoCircle();
   }
 };
 
@@ -114,6 +159,14 @@ Device.prototype.update = function () {
   } else if (this.gameEnv.game.input.activePointer.isDown) {
     this.deselect();
   }
+  this.updateExpandoCircles();
+};
+
+Device.prototype.updateExpandoCircles = function () {
+  this.expandoCircles = _.filter(this.expandoCircles, function (c) {
+    return !c.dead;
+  });
+  _.invoke(this.expandoCircles, 'update');
 };
 
 function PCDevice(gameEnv, deviceManager) {

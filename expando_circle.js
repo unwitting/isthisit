@@ -1,9 +1,12 @@
-function ExpandoCircle(gameEnv, x, y, maxDiameter, period, thickness, color) {
+function ExpandoCircle(
+    gameEnv, x, y, minDiameter, maxDiameter, period, thickness, color
+  ) {
   this.gameEnv = gameEnv;
   this.x = x;
   this.y = y;
   this.thickness = thickness;
   this.color = color;
+  this.minDiameter = minDiameter;
   this.maxDiameter = maxDiameter;
   this.period = period;
   this.beganLast = new Date();
@@ -36,6 +39,7 @@ ExpandoCircle.prototype.update = function () {
     this.dead = true;
     return;
   }
-  this.diameter = this.progress * this.maxDiameter;
+  this.diameter = 
+    (this.progress * (this.maxDiameter - this.minDiameter)) + this.minDiameter;
   this.circle = new Phaser.Circle(this.x, this.y, this.diameter);
 };
