@@ -202,11 +202,13 @@ Device.prototype.update = function (x, y) {
           this.connection.close();
         }
         this.unbindConnection();
-        var c = rails.addDataConnection(
+        var c = rails.addConversationConnection(
           this,
-          null,
-          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5 - 25,
+          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5,
+          CONVERSATIONS.usb_storage
         );
+        c.progressState(CONNECTION_STATE_OPEN);
         c.select();
       } else {
         // No, just a deselect

@@ -17,6 +17,7 @@ prodfiles="${prodfiles} connection.js"
 prodfiles="${prodfiles} connection_rails.js"
 prodfiles="${prodfiles} game.js"
 prodfiles="${prodfiles} conversations/birth.js"
+prodfiles="${prodfiles} conversations/usb_storage.js"
 
 devfiles="${prodfiles}"
 

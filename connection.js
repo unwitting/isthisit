@@ -70,10 +70,15 @@ Connection.prototype.isHovered = function () {
 
 Connection.prototype.onOpen = function () {};
 
-Connection.prototype.progressState = function () {
-  this.connectionState++;
-  if (this.connectionState === CONNECTION_STATE_OPEN) {
-    this.onOpen();
+Connection.prototype.progressState = function (target) {
+  target = target === undefined? this.connectionState + 1: target;
+  while (this.connectionState < target) {
+    this.connectionState++;
+    this.update();
+    // Fire callbacks
+    if (this.connectionState === CONNECTION_STATE_OPEN) {
+      this.onOpen();
+    }
   }
 };
 
@@ -274,8 +279,9 @@ ConversationConnection.prototype.handleUserTextSubmit = function (text) {
 ConversationConnection.prototype.moveToInput = function (inputName) {
   this.conversationInput = inputName;
   var input = this.conversation.inputs[this.conversationInput];
+  var text = typeof input.text === 'function'? input.text(): input.text;
   this.systemTextInput.animateInput(
-    input.text,
+    text,
     input.prewait || this.conversation.allInputs.prewait || 0,
     input.postwait || this.conversation.allInputs.postwait || 0
   );
