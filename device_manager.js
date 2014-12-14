@@ -9,14 +9,18 @@ DeviceManager.prototype.addDevice = function(type) {
   var device;
   switch (type) {
     case 'pc':
-      device = new PCDevice(this.gameEnv);
+      device = new PCDevice(this.gameEnv, this);
       break;
     case 'usb-storage':
-      device = new USBStorageDevice(this.gameEnv);
+      device = new USBStorageDevice(this.gameEnv, this);
       break;
   }
   this.devices.push(device);
   return device;
+};
+
+DeviceManager.prototype.deselectAll = function () {
+  _.invoke(this.devices, 'deselect');
 };
 
 DeviceManager.prototype.render = function () {

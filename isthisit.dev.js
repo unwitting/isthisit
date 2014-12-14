@@ -112,6 +112,8 @@ Device.prototype.select = function() {
 Device.prototype.update = function () {
   if (this.isClicked()) {
     this.handleClick();
+  } else if (this.gameEnv.game.input.activePointer.isDown) {
+    this.deselect();
   }
 };
 
@@ -831,7 +833,7 @@ var states = {
 state = states.awakening;
 if (DEV_MODE) {
   state = states.escape;
-  state = states.awakening;
+  //state = states.awakening;
 }
 
 var gameHandlers = {

@@ -47,7 +47,7 @@ var states = {
     create: function (gameEnv) {
       console.log('escape');
       deviceManager = new DeviceManager(gameEnv, W / 2, 50);
-      deviceManager.addDevice('pc').inhabited = true;
+      deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
       deviceManager.addDevice('usb-storage');
     },
     update: function (gameEnv) {
@@ -58,7 +58,7 @@ var states = {
 state = states.awakening;
 if (DEV_MODE) {
   state = states.escape;
-  state = states.awakening;
+  //state = states.awakening;
 }
 
 var gameHandlers = {
