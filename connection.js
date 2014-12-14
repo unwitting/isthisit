@@ -9,17 +9,25 @@ CONNECTION_STATE_DEAD = 7;
 
 function Connection(gameEnv, rails, device, inY, outY) {
   this.gameEnv = gameEnv;
+  this.created = new Date();
   this.rails = rails;
   this.device = device;
+  this.device.bindConnection(this);
   this.inY = inY;
   this.outY = outY;
-  this.inNode = new ConnectionNode(
-    gameEnv, this, true, rails.inX, inY, {r: 100, g: 100, b: 255}
-  );
-  this.outNode = new ConnectionNode(
-    gameEnv, this, false, rails.outX, outY, {r: 255, g: 100, b: 100}
-  );
-  this.nodes = [this.inNode, this.outNode];
+  this.nodes = [];
+  if (this.inY !== null) {
+    this.inNode = new ConnectionNode(
+      gameEnv, this, true, rails.inX, inY, {r: 100, g: 100, b: 255}
+    );
+    this.nodes.push(this.inNode);
+  } else {this.inNode = null;}
+  if (this.outY !== null) {
+    this.outNode = new ConnectionNode(
+      gameEnv, this, false, rails.outX, outY, {r: 255, g: 100, b: 100}
+    );
+    this.nodes.push(this.outNode);
+  } else {this.outNode = null;}
   this.connectionState = CONNECTION_STATE_INCOMING;
   this.selected = false;
   this.hovered = false;
@@ -36,12 +44,28 @@ Connection.prototype.deselect = function () {
   }
 };
 
+Connection.prototype.getConnectionLinesSelectedColor = function () {
+  return {r: 140, g: 140, b: 140};
+};
+
+Connection.prototype.getConnectionLinesUnselectedColor = function () {
+  return {r: 85, g: 85, b: 85};
+};
+
+Connection.prototype.getConnectionLinesColor = function () {
+  return this.selected?
+    this.getConnectionLinesSelectedColor():
+    this.getConnectionLinesUnselectedColor();
+};
+
 Connection.prototype.isClicked = function () {
-  return this.inNode.isClicked() || this.outNode.isClicked();
+  return (this.inNode && this.inNode.isClicked()) ||
+    (this.outNode && this.outNode.isClicked());
 };
 
 Connection.prototype.isHovered = function () {
-  return this.inNode.isHovered() || this.outNode.isHovered();
+  return (this.inNode && this.inNode.isHovered()) ||
+    (this.outNode && this.outNode.isHovered());
 };
 
 Connection.prototype.onOpen = function () {};
@@ -66,34 +90,42 @@ Connection.prototype.renderConnectionLines = function () {
     return;
   }
   var that = this;
-  var inY = Math.floor(this.inNode.y) + 0.5;
-  var outY = Math.floor(this.outNode.y) + 0.5;
-  var connectionLines = [
-    new Phaser.Line(
+  var inY = this.inNode? Math.floor(this.inNode.y) + 0.5: null;
+  var outY = this.outNode? Math.floor(this.outNode.y) + 0.5: null;
+  var maxY = inY? (outY? Math.max(inY, outY): inY): outY;
+  var connectionLines = [];
+  if (inY) {
+    connectionLines.push(new Phaser.Line(
       this.inNode.x + this.inNode.pulseCircle.circle.radius,
       inY,
       this.device.circle.x,
       inY
-    ),
-    new Phaser.Line(
+    ));
+  }
+  if (outY) {
+    connectionLines.push(new Phaser.Line(
       this.device.circle.x,
       outY,
       this.outNode.x - this.outNode.pulseCircle.circle.radius,
       outY
-    ),
-    new Phaser.Line(
-      this.device.circle.x,
-      this.device.circle.y + this.device.circle.radius,
-      this.device.circle.x,
-      Math.max(inY, outY)
-    )
-  ];
+    ));
+  }
+  connectionLines.push(new Phaser.Line(
+    this.device.circle.x,
+    this.device.circle.y + this.device.circle.radius,
+    this.device.circle.x,
+    maxY
+  ));
+  var col = this.getConnectionLinesColor();
   _.each(connectionLines, function (line) {
-    that.gameEnv.renderLine(line, 0.5, 80, 80, 80);
+    that.gameEnv.renderLine(line, 0.5, col.r, col.g, col.b);
   });
 };
 
 Connection.prototype.renderExteriorLineIn = function (thickness) {
+  if (this.inNode === null) {
+    return;
+  }
   if (!(this.connectionState < CONNECTION_STATE_REMOVING)) {
     return;
   }
@@ -131,11 +163,10 @@ Connection.prototype.renderExteriorLineOut = function (thickness) {
 };
 
 Connection.prototype.select = function () {
-  var that = this;
-  if (!that.selected) {
-    that.selected = true;
+  if (!this.selected) {
+    this.selected = true;
     _.invoke(
-      _.filter(that.nodes, function (node) {return node.displayed;}),
+      _.filter(this.nodes, function (node) {return node.displayed;}),
       'addExpandoCircle', true
     );
     if (this.connectionState === CONNECTION_STATE_AWAITING_ACCEPT) {
@@ -146,14 +177,14 @@ Connection.prototype.select = function () {
 };
 
 Connection.prototype.update = function () {
-  var that = this;
   // Update this connection
   // Detect mouse environment
   this.hovered = this.isHovered();
   if (this.isClicked()) {
     this.select();
   } else {
-    if (this.gameEnv.game.input.activePointer.isDown) {
+    if (this.gameEnv.game.input.activePointer.isDown &&
+        (new Date()) - this.created > 200) {
       this.deselect();
     }
   }
@@ -182,6 +213,7 @@ Connection.prototype.update = function () {
       this.progressState();
       break;
     case CONNECTION_STATE_DEAD:
+      this.device.unbindConnection(this);
       break;
   }
   // Update all nodes
@@ -296,7 +328,7 @@ DataConnection.prototype.constructor = DataConnection;
 
 DataConnection.prototype.update = function() {
   Connection.prototype.update.call(this);
-  while (this.connectionState < CONNECTION_STATE_OPEN) {
+  if (this.connectionState < CONNECTION_STATE_OPEN) {
     this.progressState();
   }
 };

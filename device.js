@@ -2,6 +2,7 @@ function Device(gameEnv, deviceManager) {
   this.gameEnv = gameEnv;
   this.deviceManager = deviceManager;
   this.circle = null;
+  this.connection = null;
   this._forceUnclickable = false;
   this._inhabited = false;
   this.selected = false;
@@ -22,6 +23,10 @@ Device.prototype.addExpandoCircle = function () {
     this.getRenderColor()
   );
   this.expandoCircles.push(expandoCircle);
+};
+
+Device.prototype.bindConnection = function(connection) {
+  this.connection = connection;
 };
 
 Device.prototype.deselect = function() {
@@ -81,9 +86,6 @@ Device.prototype.getYCutoff = function() {
 
 Device.prototype.handleClick = function() {
   if (this.select()) {return;}
-  if (this.selected) {
-
-  }
 };
 
 Device.prototype.inhabited = function(set) {
@@ -100,6 +102,10 @@ Device.prototype.isClicked = function () {
     this.isHovered() &&
     this.gameEnv.game.input.activePointer.isDown
   );
+};
+
+Device.prototype.isFormingConnection = function() {
+  return this.selected && (this.connection === null);
 };
 
 Device.prototype.isHovered = function () {
@@ -135,6 +141,9 @@ Device.prototype.render = function (x, y) {
 };
 
 Device.prototype.renderConnectionFormLine = function() {
+  if (!this.isFormingConnection()) {
+    return;
+  }
   var mouseY = Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5;
   if ((!this.selected) || mouseY < this.getYCutoff()) {
     return;
@@ -151,15 +160,14 @@ Device.prototype.renderConnectionFormLine = function() {
     mouseY
   );
   var horizontalLine = new Phaser.Line(this.circle.x, mouseY, mouseX, mouseY);
-  var midBead = new Phaser.Circle(this.circle.x, mouseY, 3);
   var endBead = new Phaser.Circle(
     mouseX, mouseY,
     nearExternalRail? 9: 3
   );
-  var color = this.getRenderColor();
+  //var color = this.getRenderColor();
+  var color = Connection.prototype.getConnectionLinesSelectedColor();
   this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
   this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
-  //this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
   this.gameEnv.renderCircle(endBead, 0.5, color.r, color.g, color.b, true);
 };
 
@@ -174,6 +182,12 @@ Device.prototype.select = function() {
   return false;
 };
 
+Device.prototype.unbindConnection = function(connection) {
+  if (this.connection === connection) {
+    this.connection = null;
+  }
+};
+
 Device.prototype.update = function (x, y) {
   this.updateCircle(x, y);
   if (this.isClicked()) {
@@ -181,14 +195,18 @@ Device.prototype.update = function (x, y) {
   } else if (this.gameEnv.game.input.activePointer.isDown) {
     if (this.selected) {
       // Are we near the rail?
-      if (this.isPointerNearExternalRail()) {
+      if (this.isPointerNearExternalRail() && this.isFormingConnection()) {
         // Yes, make connection
+        // First, close current one if it exists
+        if (this.connection) {
+          this.connection.close();
+        }
+        this.unbindConnection();
         var c = rails.addDataConnection(
           this,
-          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5,
+          null,
           Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5
         );
-        this.deselect();
         c.select();
       } else {
         // No, just a deselect

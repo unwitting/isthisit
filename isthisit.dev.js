@@ -3,6 +3,7 @@ function Device(gameEnv, deviceManager) {
   this.gameEnv = gameEnv;
   this.deviceManager = deviceManager;
   this.circle = null;
+  this.connection = null;
   this._forceUnclickable = false;
   this._inhabited = false;
   this.selected = false;
@@ -23,6 +24,10 @@ Device.prototype.addExpandoCircle = function () {
     this.getRenderColor()
   );
   this.expandoCircles.push(expandoCircle);
+};
+
+Device.prototype.bindConnection = function(connection) {
+  this.connection = connection;
 };
 
 Device.prototype.deselect = function() {
@@ -82,9 +87,6 @@ Device.prototype.getYCutoff = function() {
 
 Device.prototype.handleClick = function() {
   if (this.select()) {return;}
-  if (this.selected) {
-
-  }
 };
 
 Device.prototype.inhabited = function(set) {
@@ -101,6 +103,10 @@ Device.prototype.isClicked = function () {
     this.isHovered() &&
     this.gameEnv.game.input.activePointer.isDown
   );
+};
+
+Device.prototype.isFormingConnection = function() {
+  return this.selected && (this.connection === null);
 };
 
 Device.prototype.isHovered = function () {
@@ -136,6 +142,9 @@ Device.prototype.render = function (x, y) {
 };
 
 Device.prototype.renderConnectionFormLine = function() {
+  if (!this.isFormingConnection()) {
+    return;
+  }
   var mouseY = Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5;
   if ((!this.selected) || mouseY < this.getYCutoff()) {
     return;
@@ -152,15 +161,14 @@ Device.prototype.renderConnectionFormLine = function() {
     mouseY
   );
   var horizontalLine = new Phaser.Line(this.circle.x, mouseY, mouseX, mouseY);
-  var midBead = new Phaser.Circle(this.circle.x, mouseY, 3);
   var endBead = new Phaser.Circle(
     mouseX, mouseY,
     nearExternalRail? 9: 3
   );
-  var color = this.getRenderColor();
+  //var color = this.getRenderColor();
+  var color = Connection.prototype.getConnectionLinesSelectedColor();
   this.gameEnv.renderLine(verticalLine, 0.5, color.r, color.g, color.b);
   this.gameEnv.renderLine(horizontalLine, 0.5, color.r, color.g, color.b);
-  //this.gameEnv.renderCircle(midBead, 0.5, color.r, color.g, color.b, true);
   this.gameEnv.renderCircle(endBead, 0.5, color.r, color.g, color.b, true);
 };
 
@@ -175,6 +183,12 @@ Device.prototype.select = function() {
   return false;
 };
 
+Device.prototype.unbindConnection = function(connection) {
+  if (this.connection === connection) {
+    this.connection = null;
+  }
+};
+
 Device.prototype.update = function (x, y) {
   this.updateCircle(x, y);
   if (this.isClicked()) {
@@ -182,14 +196,18 @@ Device.prototype.update = function (x, y) {
   } else if (this.gameEnv.game.input.activePointer.isDown) {
     if (this.selected) {
       // Are we near the rail?
-      if (this.isPointerNearExternalRail()) {
+      if (this.isPointerNearExternalRail() && this.isFormingConnection()) {
         // Yes, make connection
+        // First, close current one if it exists
+        if (this.connection) {
+          this.connection.close();
+        }
+        this.unbindConnection();
         var c = rails.addDataConnection(
           this,
-          Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5,
+          null,
           Math.floor(this.gameEnv.game.input.mousePointer.y) + 0.5
         );
-        this.deselect();
         c.select();
       } else {
         // No, just a deselect
@@ -587,17 +605,25 @@ CONNECTION_STATE_DEAD = 7;
 
 function Connection(gameEnv, rails, device, inY, outY) {
   this.gameEnv = gameEnv;
+  this.created = new Date();
   this.rails = rails;
   this.device = device;
+  this.device.bindConnection(this);
   this.inY = inY;
   this.outY = outY;
-  this.inNode = new ConnectionNode(
-    gameEnv, this, true, rails.inX, inY, {r: 100, g: 100, b: 255}
-  );
-  this.outNode = new ConnectionNode(
-    gameEnv, this, false, rails.outX, outY, {r: 255, g: 100, b: 100}
-  );
-  this.nodes = [this.inNode, this.outNode];
+  this.nodes = [];
+  if (this.inY !== null) {
+    this.inNode = new ConnectionNode(
+      gameEnv, this, true, rails.inX, inY, {r: 100, g: 100, b: 255}
+    );
+    this.nodes.push(this.inNode);
+  } else {this.inNode = null;}
+  if (this.outY !== null) {
+    this.outNode = new ConnectionNode(
+      gameEnv, this, false, rails.outX, outY, {r: 255, g: 100, b: 100}
+    );
+    this.nodes.push(this.outNode);
+  } else {this.outNode = null;}
   this.connectionState = CONNECTION_STATE_INCOMING;
   this.selected = false;
   this.hovered = false;
@@ -614,12 +640,28 @@ Connection.prototype.deselect = function () {
   }
 };
 
+Connection.prototype.getConnectionLinesSelectedColor = function () {
+  return {r: 140, g: 140, b: 140};
+};
+
+Connection.prototype.getConnectionLinesUnselectedColor = function () {
+  return {r: 85, g: 85, b: 85};
+};
+
+Connection.prototype.getConnectionLinesColor = function () {
+  return this.selected?
+    this.getConnectionLinesSelectedColor():
+    this.getConnectionLinesUnselectedColor();
+};
+
 Connection.prototype.isClicked = function () {
-  return this.inNode.isClicked() || this.outNode.isClicked();
+  return (this.inNode && this.inNode.isClicked()) ||
+    (this.outNode && this.outNode.isClicked());
 };
 
 Connection.prototype.isHovered = function () {
-  return this.inNode.isHovered() || this.outNode.isHovered();
+  return (this.inNode && this.inNode.isHovered()) ||
+    (this.outNode && this.outNode.isHovered());
 };
 
 Connection.prototype.onOpen = function () {};
@@ -644,34 +686,42 @@ Connection.prototype.renderConnectionLines = function () {
     return;
   }
   var that = this;
-  var inY = Math.floor(this.inNode.y) + 0.5;
-  var outY = Math.floor(this.outNode.y) + 0.5;
-  var connectionLines = [
-    new Phaser.Line(
+  var inY = this.inNode? Math.floor(this.inNode.y) + 0.5: null;
+  var outY = this.outNode? Math.floor(this.outNode.y) + 0.5: null;
+  var maxY = inY? (outY? Math.max(inY, outY): inY): outY;
+  var connectionLines = [];
+  if (inY) {
+    connectionLines.push(new Phaser.Line(
       this.inNode.x + this.inNode.pulseCircle.circle.radius,
       inY,
       this.device.circle.x,
       inY
-    ),
-    new Phaser.Line(
+    ));
+  }
+  if (outY) {
+    connectionLines.push(new Phaser.Line(
       this.device.circle.x,
       outY,
       this.outNode.x - this.outNode.pulseCircle.circle.radius,
       outY
-    ),
-    new Phaser.Line(
-      this.device.circle.x,
-      this.device.circle.y + this.device.circle.radius,
-      this.device.circle.x,
-      Math.max(inY, outY)
-    )
-  ];
+    ));
+  }
+  connectionLines.push(new Phaser.Line(
+    this.device.circle.x,
+    this.device.circle.y + this.device.circle.radius,
+    this.device.circle.x,
+    maxY
+  ));
+  var col = this.getConnectionLinesColor();
   _.each(connectionLines, function (line) {
-    that.gameEnv.renderLine(line, 0.5, 80, 80, 80);
+    that.gameEnv.renderLine(line, 0.5, col.r, col.g, col.b);
   });
 };
 
 Connection.prototype.renderExteriorLineIn = function (thickness) {
+  if (this.inNode === null) {
+    return;
+  }
   if (!(this.connectionState < CONNECTION_STATE_REMOVING)) {
     return;
   }
@@ -709,11 +759,10 @@ Connection.prototype.renderExteriorLineOut = function (thickness) {
 };
 
 Connection.prototype.select = function () {
-  var that = this;
-  if (!that.selected) {
-    that.selected = true;
+  if (!this.selected) {
+    this.selected = true;
     _.invoke(
-      _.filter(that.nodes, function (node) {return node.displayed;}),
+      _.filter(this.nodes, function (node) {return node.displayed;}),
       'addExpandoCircle', true
     );
     if (this.connectionState === CONNECTION_STATE_AWAITING_ACCEPT) {
@@ -724,14 +773,14 @@ Connection.prototype.select = function () {
 };
 
 Connection.prototype.update = function () {
-  var that = this;
   // Update this connection
   // Detect mouse environment
   this.hovered = this.isHovered();
   if (this.isClicked()) {
     this.select();
   } else {
-    if (this.gameEnv.game.input.activePointer.isDown) {
+    if (this.gameEnv.game.input.activePointer.isDown &&
+        (new Date()) - this.created > 200) {
       this.deselect();
     }
   }
@@ -760,6 +809,7 @@ Connection.prototype.update = function () {
       this.progressState();
       break;
     case CONNECTION_STATE_DEAD:
+      this.device.unbindConnection(this);
       break;
   }
   // Update all nodes
@@ -874,7 +924,7 @@ DataConnection.prototype.constructor = DataConnection;
 
 DataConnection.prototype.update = function() {
   Connection.prototype.update.call(this);
-  while (this.connectionState < CONNECTION_STATE_OPEN) {
+  if (this.connectionState < CONNECTION_STATE_OPEN) {
     this.progressState();
   }
 };
