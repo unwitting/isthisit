@@ -19,6 +19,10 @@ DeviceManager.prototype.addDevice = function(type) {
   return device;
 };
 
+DeviceManager.prototype.clearDevices = function() {
+  this.devices = [];
+};
+
 DeviceManager.prototype.deselectAll = function () {
   _.invoke(this.devices, 'deselect');
 };

@@ -45,11 +45,11 @@ Device.prototype.getRenderColor = function() {
 };
 
 Device.prototype.getRenderThicknessExterior = function() {
-  return this.selected? 1.5: 0.5;
+  return 0.5
 };
 
 Device.prototype.getRenderThicknessInterior = function() {
-  return 1.5;
+  return 1;
 };
 
 Device.prototype.getRenderFillColor = function() {

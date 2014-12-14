@@ -46,11 +46,11 @@ Device.prototype.getRenderColor = function() {
 };
 
 Device.prototype.getRenderThicknessExterior = function() {
-  return this.selected? 1.5: 0.5;
+  return 0.5
 };
 
 Device.prototype.getRenderThicknessInterior = function() {
-  return 1.5;
+  return 1;
 };
 
 Device.prototype.getRenderFillColor = function() {
@@ -247,6 +247,10 @@ DeviceManager.prototype.addDevice = function(type) {
   }
   this.devices.push(device);
   return device;
+};
+
+DeviceManager.prototype.clearDevices = function() {
+  this.devices = [];
 };
 
 DeviceManager.prototype.deselectAll = function () {
@@ -885,6 +889,8 @@ var states = {
     timeTillFirstConnection: DEV_MODE? 100: 10000,
     create: function (gameEnv) {
       console.log('awakening');
+      deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
+      deviceManager.addDevice('usb-storage').forceUnclickable(true);
       this.firstConnectionTimerBegan = new Date();
     },
     update: function (gameEnv) {
@@ -901,7 +907,7 @@ var states = {
   'escape': {
     create: function (gameEnv) {
       console.log('escape');
-      deviceManager = new DeviceManager(gameEnv, W / 2, 50);
+      deviceManager.clearDevices();
       deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
       deviceManager.addDevice('usb-storage');
     },
@@ -924,6 +930,7 @@ var gameHandlers = {
     bmp = this.game.add.bitmapData(W, H);
     bmpSprite = this.game.add.sprite(0, 0, bmp);
     rails = new ConnectionRails(this);
+    deviceManager = new DeviceManager(gameEnv, W / 2, 50);
     document.addEventListener('keydown', function (event) {
       if (event.keyCode === 8 || event.keyCode === 13) {
         var myEvent = new CustomEvent('isthisit-keyinput', {
