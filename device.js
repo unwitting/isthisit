@@ -80,7 +80,10 @@ Device.prototype.getYCutoff = function() {
 };
 
 Device.prototype.handleClick = function() {
-  this.select();
+  if (this.select()) {return;}
+  if (this.selected) {
+
+  }
 };
 
 Device.prototype.inhabited = function(set) {
@@ -170,7 +173,10 @@ Device.prototype.select = function() {
     this.deviceManager.deselectAll();
     this.selected = true;
     this.addExpandoCircle();
+    this.everSelected = true;
+    return true;
   }
+  return false;
 };
 
 Device.prototype.update = function () {

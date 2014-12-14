@@ -81,7 +81,10 @@ Device.prototype.getYCutoff = function() {
 };
 
 Device.prototype.handleClick = function() {
-  this.select();
+  if (this.select()) {return;}
+  if (this.selected) {
+
+  }
 };
 
 Device.prototype.inhabited = function(set) {
@@ -171,7 +174,10 @@ Device.prototype.select = function() {
     this.deviceManager.deselectAll();
     this.selected = true;
     this.addExpandoCircle();
+    this.everSelected = true;
+    return true;
   }
+  return false;
 };
 
 Device.prototype.update = function () {
@@ -909,7 +915,14 @@ var states = {
       console.log('escape');
       deviceManager.clearDevices();
       deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
-      deviceManager.addDevice('usb-storage');
+      var usb = deviceManager.addDevice('usb-storage');
+      setTimeout(function () {
+        setInterval(function () {
+          if (!usb.everSelected) {
+            usb.addExpandoCircle();
+          }
+        }, 2000);
+      }, DEV_MODE? 100: 5000);
     },
     update: function (gameEnv) {
 
@@ -918,8 +931,7 @@ var states = {
 };
 state = states.awakening;
 if (DEV_MODE) {
-  state = states.escape;
-  //state = states.awakening;
+  //state = states.escape;
 }
 
 var gameHandlers = {

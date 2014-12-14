@@ -50,7 +50,14 @@ var states = {
       console.log('escape');
       deviceManager.clearDevices();
       deviceManager.addDevice('pc').inhabited(true).forceUnclickable(true);
-      deviceManager.addDevice('usb-storage');
+      var usb = deviceManager.addDevice('usb-storage');
+      setTimeout(function () {
+        setInterval(function () {
+          if (!usb.everSelected) {
+            usb.addExpandoCircle();
+          }
+        }, 2000);
+      }, DEV_MODE? 100: 5000);
     },
     update: function (gameEnv) {
 
@@ -59,8 +66,7 @@ var states = {
 };
 state = states.awakening;
 if (DEV_MODE) {
-  state = states.escape;
-  //state = states.awakening;
+  //state = states.escape;
 }
 
 var gameHandlers = {
