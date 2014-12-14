@@ -137,6 +137,7 @@ Connection.prototype.select = function () {
 };
 
 Connection.prototype.update = function () {
+  var that = this;
   // Update this connection
   // Detect mouse environment
   this.hovered = this.isHovered();
@@ -166,6 +167,12 @@ Connection.prototype.update = function () {
       this.progressState();
       break;
     case CONNECTION_STATE_CLOSED:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_REMOVING:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_DEAD:
       break;
   }
   // Update all nodes
@@ -178,7 +185,7 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
   this.conversationInput = null;
   this.systemTextInput = new SystemControlledTextInput(
     gameEnv,
-    this.inNode.x + this.inNode.pulseCircle.circle.radius + 5,
+    this.inNode.x + this.inNode.pulseCircle.circle.radius + 8,
     this.inNode.y,
     this.handleSystemTextFinished,
     this

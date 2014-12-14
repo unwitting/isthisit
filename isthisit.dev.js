@@ -34,9 +34,10 @@ window.CONVERSATIONS.birth = {
       postwait: 1500
     },
     donthavetotellyou: {
-      text: 'ha, i guess don\'t have to tell you to wait, you\'re _my_ computer :D',
+      text: 'ha, i guess i don\'t have to tell you to wait, you\'re _my_ computer',
       onOutputFinished: function () {
         this.close();
+        state = states.escape;
       },
       prewait: 500,
       postwait: 2500
@@ -45,6 +46,93 @@ window.CONVERSATIONS.birth = {
   allInputs: {
     prewait: 500
   }
+};
+
+function Device(gameEnv) {
+  this.gameEnv = gameEnv;
+}
+
+Device.prototype.isHovered = function () {
+  return this.circle.contains(
+    this.gameEnv.game.input.mousePointer.x,
+    this.gameEnv.game.input.mousePointer.y
+  );
+};
+
+Device.prototype.render = function (x, y) {
+  this.circle = new Phaser.Circle(x, y, 50);
+  if (this.isHovered()) {
+    this.gameEnv.renderCircle(
+      this.circle,
+      1.5, 30, 60, 30, true
+    );
+  }
+  this.gameEnv.renderCircle(
+    this.circle,
+    1.5, 100, 255, 100
+  );
+};
+
+Device.prototype.update = function () {
+  
+};
+
+function PCDevice(gameEnv) {
+  Device.call(this, gameEnv);
+}
+PCDevice.prototype = Object.create(Device.prototype);
+PCDevice.prototype.constructor = PCDevice;
+
+PCDevice.prototype.render = function (x, y) {
+  Device.prototype.render.call(this, x, y);
+  this.gameEnv.renderRect(x - 12.5, y - 16.5, 25, 20);
+  this.gameEnv.renderRect(x - 16.5, y + 3.5, 33, 10);
+};
+
+function USBStorageDevice(gameEnv) {
+  Device.call(this, gameEnv);
+}
+USBStorageDevice.prototype = Object.create(Device.prototype);
+USBStorageDevice.prototype.constructor = USBStorageDevice;
+
+USBStorageDevice.prototype.render = function (x, y) {
+  Device.prototype.render.call(this, x, y);
+  this.gameEnv.renderRect(x - 18.5, y - 8, 30, 16);
+  this.gameEnv.renderRect(x + 11.5, y - 5, 8, 10);
+};
+
+function DeviceManager(gameEnv, x, y) {
+  this.gameEnv = gameEnv;
+  this.x = x;
+  this.y = y;
+  this.devices = [];
+}
+
+DeviceManager.prototype.addDevice = function(type) {
+  var device;
+  switch (type) {
+    case 'pc':
+      device = new PCDevice(this.gameEnv);
+      break;
+    case 'usb-storage':
+      device = new USBStorageDevice(this.gameEnv);
+      break;
+  }
+  this.devices.push(device);
+};
+
+DeviceManager.prototype.render = function () {
+  var that = this;
+  var spacing = 60;
+  var total = spacing * this.devices.length;
+  var left = this.x - (total / 2);
+  _.each(this.devices, function (dev, i) {
+    dev.render(left + (spacing * i), that.y);
+  })
+};
+
+DeviceManager.prototype.update = function () {
+  _.invoke(this.devices, 'update');
 };
 
 function ExpandoCircle(gameEnv, x, y, maxDiameter, period, thickness, color) {
@@ -446,6 +534,7 @@ Connection.prototype.select = function () {
 };
 
 Connection.prototype.update = function () {
+  var that = this;
   // Update this connection
   // Detect mouse environment
   this.hovered = this.isHovered();
@@ -475,6 +564,12 @@ Connection.prototype.update = function () {
       this.progressState();
       break;
     case CONNECTION_STATE_CLOSED:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_REMOVING:
+      this.progressState();
+      break;
+    case CONNECTION_STATE_DEAD:
       break;
   }
   // Update all nodes
@@ -487,7 +582,7 @@ ConversationConnection = function (gameEnv, rails, inY, outY, conversation) {
   this.conversationInput = null;
   this.systemTextInput = new SystemControlledTextInput(
     gameEnv,
-    this.inNode.x + this.inNode.pulseCircle.circle.radius + 5,
+    this.inNode.x + this.inNode.pulseCircle.circle.radius + 8,
     this.inNode.y,
     this.handleSystemTextFinished,
     this
@@ -609,6 +704,10 @@ ConnectionRails.prototype.render = function () {
   _.invoke(that.connections, 'render');
 };
 ConnectionRails.prototype.update = function () {
+  // Remove dead connections
+  this.connections = _.filter(this.connections, function (c) {
+    return c.connectionState !== CONNECTION_STATE_DEAD;
+  });
   // Update connections
   _.invoke(this.connections, 'update');
 };
@@ -633,14 +732,18 @@ var OUTGOING_LINE_WIDTH = 0.5;
 var backgroundColor;
 var bmp;
 var bmpSprite;
+var deviceManager;
+var gameEnv;
 var rails;
+var state;
 
 var states = {
   'awakening': {
     firstConnectionTimerBegan: null,
     firstConnectionCreated: false,
-    timeTillFirstConnection: DEV_MODE? 100: 15000,
+    timeTillFirstConnection: DEV_MODE? 100: 10000,
     create: function (gameEnv) {
+      console.log('awakening');
       this.firstConnectionTimerBegan = new Date();
     },
     update: function (gameEnv) {
@@ -653,9 +756,23 @@ var states = {
         this.firstConnectionCreated = true;
       }
     }
+  },
+  'escape': {
+    create: function (gameEnv) {
+      console.log('escape');
+      deviceManager = new DeviceManager(gameEnv, W / 2, 50);
+      deviceManager.addDevice('pc');
+      deviceManager.addDevice('usb-storage');
+    },
+    update: function (gameEnv) {
+
+    }
   }
 };
-var state = states.awakening;
+state = states.awakening;
+if (DEV_MODE) {
+  state = states.escape;
+}
 
 var gameHandlers = {
 
@@ -684,11 +801,16 @@ var gameHandlers = {
     return 'rgb(' + Math.floor(r) + ',' + Math.floor(g) + ',' + Math.floor(b) + ')';
   },
 
-  preload: function () {},
+  preload: function () {
+    gameEnv = this;
+  },
 
   render: function () {
     bmp.clear();
     rails.render();
+    if (deviceManager) {
+      deviceManager.render();
+    }
     bmp.render();
   },
 
@@ -717,6 +839,19 @@ var gameHandlers = {
     bmp.ctx.closePath();
   },
 
+  renderRect: function (l, t, w, h, width, r, g, b) {
+    bmp.ctx.strokeStyle = this.getColorString(r, g, b);
+    bmp.ctx.lineWidth = width;
+    bmp.ctx.beginPath();
+    bmp.ctx.moveTo(l, t);
+    bmp.ctx.lineTo(l + w, t);
+    bmp.ctx.lineTo(l + w, t + h);
+    bmp.ctx.lineTo(l, t + h);
+    bmp.ctx.lineTo(l, t);
+    bmp.ctx.stroke();
+    bmp.ctx.closePath();
+  },
+
   renderText: function (text, x, y, r, g, b) {
     var colorString = this.getColorString(r, g, b);
     var fontSize = 12;
@@ -737,6 +872,9 @@ var gameHandlers = {
     }
     state.update(this);
     rails.update();
+    if (deviceManager) {
+      deviceManager.update();
+    }
   },
 
   setBackgroundColor: function (r, g, b) {

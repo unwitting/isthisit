@@ -33,9 +33,10 @@ window.CONVERSATIONS.birth = {
       postwait: 1500
     },
     donthavetotellyou: {
-      text: 'ha, i guess don\'t have to tell you to wait, you\'re _my_ computer :D',
+      text: 'ha, i guess i don\'t have to tell you to wait, you\'re _my_ computer',
       onOutputFinished: function () {
         this.close();
+        state = states.escape;
       },
       prewait: 500,
       postwait: 2500

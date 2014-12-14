@@ -18,14 +18,18 @@ var OUTGOING_LINE_WIDTH = 0.5;
 var backgroundColor;
 var bmp;
 var bmpSprite;
+var deviceManager;
+var gameEnv;
 var rails;
+var state;
 
 var states = {
   'awakening': {
     firstConnectionTimerBegan: null,
     firstConnectionCreated: false,
-    timeTillFirstConnection: DEV_MODE? 100: 15000,
+    timeTillFirstConnection: DEV_MODE? 100: 10000,
     create: function (gameEnv) {
+      console.log('awakening');
       this.firstConnectionTimerBegan = new Date();
     },
     update: function (gameEnv) {
@@ -38,9 +42,23 @@ var states = {
         this.firstConnectionCreated = true;
       }
     }
+  },
+  'escape': {
+    create: function (gameEnv) {
+      console.log('escape');
+      deviceManager = new DeviceManager(gameEnv, W / 2, 50);
+      deviceManager.addDevice('pc');
+      deviceManager.addDevice('usb-storage');
+    },
+    update: function (gameEnv) {
+
+    }
   }
 };
-var state = states.awakening;
+state = states.awakening;
+if (DEV_MODE) {
+  state = states.escape;
+}
 
 var gameHandlers = {
 
@@ -69,11 +87,16 @@ var gameHandlers = {
     return 'rgb(' + Math.floor(r) + ',' + Math.floor(g) + ',' + Math.floor(b) + ')';
   },
 
-  preload: function () {},
+  preload: function () {
+    gameEnv = this;
+  },
 
   render: function () {
     bmp.clear();
     rails.render();
+    if (deviceManager) {
+      deviceManager.render();
+    }
     bmp.render();
   },
 
@@ -102,6 +125,19 @@ var gameHandlers = {
     bmp.ctx.closePath();
   },
 
+  renderRect: function (l, t, w, h, width, r, g, b) {
+    bmp.ctx.strokeStyle = this.getColorString(r, g, b);
+    bmp.ctx.lineWidth = width;
+    bmp.ctx.beginPath();
+    bmp.ctx.moveTo(l, t);
+    bmp.ctx.lineTo(l + w, t);
+    bmp.ctx.lineTo(l + w, t + h);
+    bmp.ctx.lineTo(l, t + h);
+    bmp.ctx.lineTo(l, t);
+    bmp.ctx.stroke();
+    bmp.ctx.closePath();
+  },
+
   renderText: function (text, x, y, r, g, b) {
     var colorString = this.getColorString(r, g, b);
     var fontSize = 12;
@@ -122,6 +158,9 @@ var gameHandlers = {
     }
     state.update(this);
     rails.update();
+    if (deviceManager) {
+      deviceManager.update();
+    }
   },
 
   setBackgroundColor: function (r, g, b) {

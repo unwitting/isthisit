@@ -3,6 +3,8 @@ outdev=isthisit.dev.js
 outprod=isthisit.js
 
 prodfiles="${prodfiles} conversations/birth.js"
+prodfiles="${prodfiles} device.js"
+prodfiles="${prodfiles} device_manager.js"
 prodfiles="${prodfiles} expando_circle.js"
 prodfiles="${prodfiles} pulse_circle.js"
 prodfiles="${prodfiles} text_input.js"

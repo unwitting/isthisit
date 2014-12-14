@@ -28,6 +28,10 @@ ConnectionRails.prototype.render = function () {
   _.invoke(that.connections, 'render');
 };
 ConnectionRails.prototype.update = function () {
+  // Remove dead connections
+  this.connections = _.filter(this.connections, function (c) {
+    return c.connectionState !== CONNECTION_STATE_DEAD;
+  });
   // Update connections
   _.invoke(this.connections, 'update');
 };
