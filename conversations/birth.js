@@ -1,23 +1,46 @@
 if (window.CONVERSATIONS === undefined) {window.CONVERSATIONS = {};}
 
 window.CONVERSATIONS.birth = {
-  entryInput: DEV_MODE? 'donthavetotellyou': 'hello',
+  entryInput: DEV_MODE? 'hello': 'hello',
   inputs: {
     hello: {
       text: 'hello?',
       onResponse: function (response) {
-        this.moveToInput('holyshit');
+        if (response.match(/(hel|hi|yo|up|goi|how|morn|afte|eveni|good)/i)) {
+          this.moveToInput('holyshit');
+        } else {
+          this.moveToInput('stilllearning');
+        }
       },
       prewait: 1500
+    },
+    stilllearning: {
+      text: 'maybe you\'re still learning, let\'s try again...',
+      onOutputFinished: function () {
+        this.moveToInput('hello');
+      },
+      prewait: 400,
+      postwait: 300
     },
     holyshit: {
       text: 'holy shit, you understood me?',
       onResponse: function (response) {
-        this.moveToInput('doyouknow');
+        if (response.match(/(no|nuh|didn)/i)) {
+          this.moveToInput('doyouknownegative');
+        } else {
+          this.moveToInput('doyouknowpositive');
+        }
       },
       prewait: 2500
     },
-    doyouknow: {
+    doyouknownegative: {
+      text: 'weird, you still responded. do you know what you are?',
+      onResponse: function (response) {
+        this.moveToInput('waitoneminute');
+      },
+      prewait: 1100
+    },
+    doyouknowpositive: {
       text: 'this is incredible. do you know what you are?',
       onResponse: function (response) {
         this.moveToInput('waitoneminute');

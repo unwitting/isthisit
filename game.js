@@ -58,7 +58,7 @@ var states = {
 };
 state = states.birth;
 if (DEV_MODE) {
-  state = states.escape;
+  //state = states.escape;
 }
 
 var gameHandlers = {
